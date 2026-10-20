@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19",
+  "generated_at": "2026-10-20",
   "universe_size": 2381,
   "winsorize_percentiles": [
     1,
@@ -52,7 +52,7 @@
       },
       "marketCap": {
         "p25": 372,
-        "p50": 1802,
+        "p50": 1803,
         "p75": 8915,
         "sample_size": 2373
       }
@@ -201,7 +201,7 @@
         "sample_size": 349
       },
       "marketCap": {
-        "p25": 158,
+        "p25": 159,
         "p50": 824,
         "p75": 4015,
         "sample_size": 352
@@ -503,7 +503,7 @@
       "marketCap": {
         "p25": 287,
         "p50": 1428,
-        "p75": 5470,
+        "p75": 5562,
         "sample_size": 115
       }
     },
