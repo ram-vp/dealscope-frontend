@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-09",
+  "generated_at": "2026-11-10",
   "universe_size": 2381,
   "winsorize_percentiles": [
     1,
@@ -201,7 +201,7 @@
         "sample_size": 349
       },
       "marketCap": {
-        "p25": 160,
+        "p25": 159,
         "p50": 814,
         "p75": 4080,
         "sample_size": 352
