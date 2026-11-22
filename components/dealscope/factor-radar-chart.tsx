@@ -94,7 +94,8 @@ export function FactorRadarChart({
 
   // Target company polygon points (Handles FIG 3-point triangle or standard 4-point quadrilateral)
   const targetPolygonPoints = (() => {
-    const validAxes = isFig && factors.debtLevel == null ? axes.filter((a) => a.key !== "debtLevel") : axes
+    // A missing factor is left out of the shape; drawn at the centre it read as 0.
+    const validAxes = axes.filter((a) => factors[a.key] != null)
     return validAxes
       .map((axis) => {
         const val = factors[axis.key]
@@ -107,15 +108,17 @@ export function FactorRadarChart({
 
   // Company Archetype diagnosis in simple plain language
   const archetype = useMemo(() => {
-    const g = factors.revenueGrowth ?? 50
-    const m = factors.ebitdaMargin ?? 50
-    const r = factors.roce ?? 50
-    const d = factors.debtLevel ?? 50
+    const { revenueGrowth: g, ebitdaMargin: m, roce: r } = factors
+    // These labels are claims about all three: never make one from a guess.
+    if (g == null || m == null || r == null) {
+      return { label: "Incomplete factor data", desc: "Too few reported factors to characterise", color: "text-muted-foreground border-border/60 bg-card/40" }
+    }
+    const d = factors.debtLevel ?? 0
 
     if (g >= 75 && m >= 70 && r >= 70) return { label: "Top-Quartile Compounder", desc: "Outperforming peers on Growth, Margin & Capital Efficiency", color: "text-accent border-accent/40 bg-accent/5" }
-    if (r >= 80 && (isFig || d >= 75)) return { label: "High-Return Capital Efficient", desc: "Superior ROCE paired with a pristine balance sheet", color: "text-emerald-500 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/5" }
+    if (r >= 80 && (isFig || d >= 75)) return { label: "High-Return Capital Efficient", desc: "Top-quintile ROCE with low leverage", color: "text-emerald-500 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/5" }
     if (g >= 75 && m < 45) return { label: "High-Growth Expansion Play", desc: "Aggressive revenue expansion ahead of profitability inflection", color: "text-cyan-500 dark:text-cyan-400 border-cyan-500/40 bg-cyan-500/5" }
-    if (m >= 75 && g < 40) return { label: "Cash-Rich Margin Leader", desc: "High operating margin cash generator in mature sector", color: "text-amber-500 dark:text-amber-300 border-amber-400/40 bg-amber-400/5" }
+    if (m >= 75 && g < 40) return { label: "High-Margin, Slower Growth", desc: "Margin in the top quartile with below-median growth", color: "text-amber-500 dark:text-amber-300 border-amber-400/40 bg-amber-400/5" }
     if (r < 35 && m < 35) return { label: "Operational Turnaround", desc: "Underperforming sector median; candidate for restructuring", color: "text-rose-500 dark:text-rose-400 border-rose-500/40 bg-rose-500/5" }
     return { label: "Sector-Balanced Performer", desc: "Operating consistently within median sector ranges", color: "text-muted-foreground border-border/60 bg-card/40" }
   }, [factors, isFig])
@@ -409,7 +412,7 @@ export function FactorRadarChart({
                 <span className="text-muted-foreground text-[11px]">Sector Percentile:</span>
                 <span className="text-foreground font-bold">
                   {isFig && axes[hoveredIndex].key === "debtLevel"
-                    ? "Exempt (FIG Bank)"
+                    ? "Not scored for Financial Services"
                     : factors[axes[hoveredIndex].key] != null
                     ? `${factors[axes[hoveredIndex].key]} / 100`
                     : "No Data"}

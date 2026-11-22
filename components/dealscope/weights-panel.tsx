@@ -26,13 +26,15 @@ export function WeightsPanel({ open, weights, onWeightsChange, onClose }: Weight
         <>
           <p className="flex flex-col font-mono">
             <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Total Allocation</span>
-            <span className="text-sm font-bold text-accent">{total}% Allocated</span>
+            <span className="text-sm font-bold text-accent" role="status">
+              {total === 0 ? "Set a weight above 0" : "Normalized to 100%"}
+            </span>
           </p>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => onWeightsChange({ ...DEFAULT_WEIGHTS })}>
               Reset
             </Button>
-            <Button variant="primary" onClick={onClose}>
+            <Button variant="primary" onClick={onClose} disabled={total === 0}>
               Apply Weights
             </Button>
           </div>
@@ -49,6 +51,7 @@ export function WeightsPanel({ open, weights, onWeightsChange, onClose }: Weight
             key={factor.key}
             label={factor.label}
             value={weights[factor.key]}
+            share={total ? Math.round((weights[factor.key] / total) * 100) : 0}
             onChange={(v) => onWeightsChange({ ...weights, [factor.key]: v })}
           />
         ))}
@@ -62,7 +65,18 @@ export function WeightsPanel({ open, weights, onWeightsChange, onClose }: Weight
   )
 }
 
-function WeightSlider({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+function WeightSlider({
+  label,
+  value,
+  share,
+  onChange,
+}: {
+  label: string
+  value: number
+  /** This weight as a percentage of all four: what the score actually uses. */
+  share: number
+  onChange: (value: number) => void
+}) {
   const id = useId()
   return (
     <div>
@@ -70,7 +84,7 @@ function WeightSlider({ label, value, onChange }: { label: string; value: number
         <label htmlFor={id} className="font-mono text-xs uppercase tracking-[0.2em] text-foreground">
           {label}
         </label>
-        <span className="font-mono text-xs tabular-nums text-accent">{value}%</span>
+        <span className="font-mono text-xs tabular-nums text-accent">{share}% of score</span>
       </div>
       <input
         id={id}
@@ -79,7 +93,7 @@ function WeightSlider({ label, value, onChange }: { label: string; value: number
         max={100}
         step={5}
         value={value}
-        aria-valuetext={`${value}%`}
+        aria-valuetext={`${share}% of the score`}
         onChange={(e) => onChange(Number(e.target.value))}
         className="ds-slider w-full"
       />

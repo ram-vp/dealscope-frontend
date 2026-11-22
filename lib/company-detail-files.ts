@@ -6,7 +6,7 @@ import { DETAIL_SHARDS, detailShard } from "@/lib/data-paths"
 
 // Build time only: turns narratives.json + news.json into per-shard files.
 
-type NarrativeFile = Record<string, { about?: unknown; why_this_score?: unknown; rationale?: unknown }>
+type NarrativeFile = Record<string, { about?: unknown }>
 
 function toArray<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : []
@@ -40,10 +40,9 @@ function buildShards(): Record<string, CompanyDetails>[] {
   for (const ticker of new Set([...Object.keys(narratives), ...news.keys()])) {
     const entry = narratives[ticker]
     shards[detailShard(ticker)][ticker] = {
-      narrative: {
-        about: asString(entry?.about),
-        whyThisScore: asString(entry?.why_this_score) ?? asString(entry?.rationale),
-      },
+      // why_this_score is not shipped: it quotes the snapshot it was written
+      // from. lib/score-rationale.ts writes it from the live numbers instead.
+      narrative: { about: asString(entry?.about) },
       news: news.get(ticker) ?? normalizeNewsEntry(null),
     }
   }

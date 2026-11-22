@@ -25,6 +25,7 @@ import {
 } from "@/lib/screener"
 import { parseQuery, screenAfterClearedSearch, screenFromTypedQuery } from "@/lib/query-parser"
 import { encodeUrlState, decodeUrlState } from "@/lib/url-state"
+import { isCompanyLookup } from "@/lib/company-lookup"
 import type { ExampleScreen } from "@/lib/example-screens"
 import { SITE } from "@/lib/site"
 import type { UniverseSummary } from "@/lib/universe-summary"
@@ -68,6 +69,12 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
   const [weights, setWeights] = useState<Weights>({ ...DEFAULT_WEIGHTS })
   const [weightsOpen, setWeightsOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // Enter pressed before the universe arrived: name or screen isn't knowable yet.
+  const [runQueued, setRunQueued] = useState(false)
+  // Results position, so coming back from a tear sheet doesn't lose your place.
+  const [expandedFor, setExpandedFor] = useState<string | null>(null)
+  const resultsScroll = useRef(0)
+  const restoreScroll = useRef(false)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const appliedSearch = useRef<string | null>(null)
@@ -81,6 +88,7 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
     setCommittedScreen(decoded.screen)
     setRawText(decoded.screen.text)
     setDebouncedText(decoded.screen.text)
+    if (decoded.weights) setWeights(decoded.weights)
   }, [])
 
   const syncFromRouter = useCallback(() => {
@@ -108,6 +116,7 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
 
     const onPopState = () => {
       focusHeading.current = true
+      restoreScroll.current = true
       syncFromUrl()
     }
     window.addEventListener("popstate", onPopState)
@@ -120,22 +129,33 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
     return () => clearTimeout(t)
   }, [rawText])
 
-  const parsed = useMemo(() => parseQuery(debouncedText), [debouncedText])
-
-  const computeScreen = useCallback(
-    (text: string) => screenFromTypedQuery(text, committedScreen),
-    [committedScreen],
-  )
-  const screen = useMemo(() => computeScreen(debouncedText), [computeScreen, debouncedText])
-
   const universe = useUniverse()
   const ready = universe.status === "ready"
   const companies = ready ? universe.companies : NO_COMPANIES
 
-  const selectedCompany: Company | null = useMemo(
-    () => (tickerParam ? companies.find((c) => c.ticker === tickerParam) ?? null : null),
-    [companies, tickerParam],
+  // Hand-typed links say ?ticker=tcs.
+  const selectedCompany: Company | null = useMemo(() => {
+    const wanted = tickerParam?.toUpperCase()
+    return wanted ? companies.find((c) => c.ticker.toUpperCase() === wanted) ?? null : null
+  }, [companies, tickerParam])
+
+  const computeScreen = useCallback(
+    (text: string): ScreenFilters => {
+      if (text === committedScreen.text) return committedScreen
+      // A company name keeps the visual filters and is searched exactly as typed.
+      if (isCompanyLookup(companies, text)) return makeScreen({ ...committedScreen, text: text.trim() })
+      return screenFromTypedQuery(text, committedScreen)
+    },
+    [companies, committedScreen],
   )
+  const screen = useMemo(() => computeScreen(debouncedText), [computeScreen, debouncedText])
+  const recognised = useMemo(
+    () => parseQuery(debouncedText).recognised && !isCompanyLookup(companies, debouncedText),
+    [companies, debouncedText],
+  )
+  // Typed queries fill screen.industries only. The pickers edit the bucket copy,
+  // so hand them the union, or touching any band drops the typed industries.
+  const pickerFilters: BucketFilters = useMemo(() => ({ ...screen.buckets, industry: screen.industries }), [screen])
   // An unknown ticker degrades to results, but only once there is a list to check it against.
   const shownView: View = view === "detail" && ready && !selectedCompany ? "results" : view
   const shownTicker = shownView === "detail" ? tickerParam : null
@@ -148,7 +168,11 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
   }, [needsUniverse])
 
   const { results, matchCount } = useMemo(() => {
-    if (companies.length > 0) return runScreen(companies, screen, weights)
+    if (companies.length > 0) {
+      const { results: ranked } = runScreen(companies, screen, weights)
+      // The count is what's listed, after any name search.
+      return { results: ranked, matchCount: ranked.length }
+    }
     // Until it loads: an empty screen matches everything, anything else is unknown.
     return { results: NO_COMPANIES, matchCount: isScreenEmpty(screen) ? summary.totalCount : null }
   }, [companies, screen, weights, summary.totalCount])
@@ -164,6 +188,12 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
     heading.focus({ preventScroll: true })
   }, [shownView, shownTicker, ready])
 
+  useLayoutEffect(() => {
+    if (!restoreScroll.current || (shownView === "results" && !ready)) return
+    restoreScroll.current = false
+    window.scrollTo({ top: shownView === "results" ? resultsScroll.current : 0, behavior: "instant" })
+  }, [shownView, shownTicker, ready])
+
   useEffect(() => {
     document.title =
       shownView === "detail" && selectedCompany
@@ -177,10 +207,10 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
   const updateScreen = useCallback(
     (next: ScreenFilters) => {
       setCommittedScreen(next)
-      const qs = encodeUrlState({ view: shownView, ticker: shownTicker, screen: next })
+      const qs = encodeUrlState({ view: shownView, ticker: shownTicker, screen: next, weights })
       if (window.location.search !== (qs ? `?${qs}` : "")) writeUrl("replace", qs)
     },
-    [shownView, shownTicker, writeUrl],
+    [shownView, shownTicker, weights, writeUrl],
   )
 
   // Real view transitions (landing <-> results <-> detail)
@@ -190,18 +220,23 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
       const nextTicker = params.ticker !== undefined ? params.ticker : shownTicker
       if (nextView !== shownView || nextTicker !== shownTicker) focusHeading.current = true
 
-      writeUrl("push", encodeUrlState({ view: nextView, ticker: nextTicker, screen: params.screen ?? screen }))
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }))
+      if (shownView === "results" && nextView === "detail") resultsScroll.current = window.scrollY
+      const returning = shownView === "detail" && nextView === "results"
+      restoreScroll.current = returning
+
+      writeUrl("push", encodeUrlState({ view: nextView, ticker: nextTicker, screen: params.screen ?? screen, weights }))
+      if (!returning) requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }))
     },
-    [shownView, shownTicker, screen, writeUrl],
+    [shownView, shownTicker, screen, weights, writeUrl],
   )
 
   const materialize = useCallback(
     (next: ScreenFilters) => {
-      const cleaned = { ...next, text: "" }
-      setRawText("")
-      setDebouncedText("")
-      updateScreen(cleaned)
+      // The query's constraints are now chips. Keep only the name part, so
+      // picking a sector while searching "tata" doesn't forget "tata".
+      setRawText(next.text)
+      setDebouncedText(next.text)
+      updateScreen(next)
     },
     [updateScreen],
   )
@@ -253,10 +288,29 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
     [screen, materialize],
   )
 
-  const handleRun = useCallback(
+  const runTyped = useCallback(
     () => navigate({ view: "results", screen: computeScreen(rawText) }),
     [navigate, computeScreen, rawText],
   )
+  const handleRun = useCallback(() => {
+    if (ready || rawText.trim() === "") return runTyped()
+    setRunQueued(true)
+    void loadUniverse()
+  }, [ready, rawText, runTyped])
+
+  useEffect(() => {
+    if (!runQueued || !ready) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- completes a deferred user action
+    setRunQueued(false)
+    runTyped()
+  }, [runQueued, ready, runTyped])
+
+  const closeWeights = useCallback(() => {
+    setWeightsOpen(false)
+    // On close rather than per step: Safari throws after 100 replaceState calls in 30s.
+    const qs = encodeUrlState({ view: shownView, ticker: shownTicker, screen, weights })
+    if (window.location.search !== (qs ? `?${qs}` : "")) writeUrl("replace", qs)
+  }, [shownView, shownTicker, screen, weights, writeUrl])
 
   const handleApplyScreen = useCallback(
     (example: ExampleScreen) => {
@@ -279,7 +333,8 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
     navigate({ view: "landing", ticker: null, screen: makeScreen() })
   }, [navigate])
 
-  const activeFilterCount = countActiveBucketFilters(screen.buckets)
+  const activeFilterCount = countActiveBucketFilters(pickerFilters)
+  const resultsKey = encodeUrlState({ view: "results", ticker: null, screen })
   const queryText = rawText
 
   return (
@@ -291,7 +346,8 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
       </Suspense>
 
       <div className="relative z-10">
-        {shownView === "landing" && (
+        {shownView === "landing" && runQueued && universe.status === "loading" && <ViewSkeleton />}
+        {shownView === "landing" && !(runQueued && universe.status === "loading") && (
           <>
             <div className="deeplink-placeholder">
               <ViewSkeleton />
@@ -318,14 +374,14 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
                 screen={screen}
                 onRemoveChip={handleRemoveChip}
                 onClearAll={handleClearAll}
-                recognised={parsed.recognised}
+                recognised={recognised}
                 screens={summary.screens}
                 onApplyScreen={handleApplyScreen}
                 sectors={summary.sectors}
                 dealCount={summary.dealCount}
                 industryGroups={summary.industryGroups}
                 unclassifiedCount={summary.unclassifiedCount}
-                filters={screen.buckets}
+                filters={pickerFilters}
                 onFiltersChange={handleBucketsChange}
               />
             </div>
@@ -356,7 +412,7 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
               selectedSectors={screen.sectors}
               onToggleSector={toggleSector}
               weights={weights}
-              filters={screen.buckets}
+              filters={pickerFilters}
               onFiltersChange={handleBucketsChange}
               industryGroups={summary.industryGroups}
               unclassifiedCount={summary.unclassifiedCount}
@@ -365,13 +421,15 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
               totalCount={companies.length}
               onRemoveChip={handleRemoveChip}
               onClearAll={handleClearAll}
-              recognised={parsed.recognised}
+              recognised={recognised}
               screens={summary.screens}
               onApplyScreen={handleApplyScreen}
               onSelectCompany={handleSelectCompany}
               onOpenWeights={() => setWeightsOpen(true)}
               onOpenFilters={() => setFiltersOpen(true)}
               onBack={handleBackToLanding}
+              showAll={expandedFor === resultsKey}
+              onShowAll={() => setExpandedFor(resultsKey)}
               sectors={summary.sectors}
             />
           </div>
@@ -395,12 +453,12 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
         open={weightsOpen}
         weights={weights}
         onWeightsChange={setWeights}
-        onClose={() => setWeightsOpen(false)}
+        onClose={closeWeights}
       />
 
       <FiltersPanel
         open={filtersOpen}
-        filters={screen.buckets}
+        filters={pickerFilters}
         onFiltersChange={handleBucketsChange}
         onClose={() => setFiltersOpen(false)}
         onApply={() => {

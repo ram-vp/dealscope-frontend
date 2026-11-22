@@ -152,3 +152,53 @@ test("theme choice survives a reload", async ({ page }) => {
   await page.reload()
   await expect(page.locator("html")).not.toHaveClass(/dark/)
 })
+
+test("M&M finds Mahindra and nonsense finds nothing", async ({ page }) => {
+  await open(page)
+  await searchBox(page).fill("M&M")
+  await searchBox(page).press("Enter")
+  await expect(resultRows(page).first()).toContainText(/mahindra/i)
+  await searchBox(page).fill("zzzzqqq")
+  await expect(resultRows(page)).toHaveCount(0)
+  await expect(pageTitle(page)).toContainText(/^0 compan/i)
+})
+
+test("a company name containing a screening word finds the company", async ({ page }) => {
+  await open(page)
+  await searchBox(page).fill("tata steel")
+  await searchBox(page).press("Enter")
+  await expect(resultRows(page).first()).toContainText(/tata steel/i)
+})
+
+test("changing a band keeps an industry that was typed", async ({ page }) => {
+  await open(page, "/?view=results")
+  await searchBox(page).fill("pharma high margin")
+  await expect(page.getByRole("button", { name: /remove filter: drug manufacturers - general/i })).toBeVisible()
+  await page.getByRole("button", { name: /^Filters/ }).click()
+  const drawer = page.getByRole("dialog", { name: /filters/i })
+  await drawer.getByRole("button", { name: /^None\s*0%/ }).click()
+  await drawer.getByRole("button", { name: /View [\d,]+ Match/i }).click()
+  await expect(page).toHaveURL(/ind=Drug/)
+})
+
+test("weights travel with the link", async ({ page }) => {
+  await open(page, "/?view=results&w=100-0-0-0")
+  await page.getByRole("button", { name: /^Weights/ }).click()
+  await expect(page.getByRole("slider", { name: /Revenue Growth/ })).toHaveValue("100")
+})
+
+test("lower-case ticker links open the tear sheet", async ({ page }) => {
+  await open(page, "/?view=detail&ticker=tcs")
+  await expect(pageTitle(page)).toContainText(/tata consultancy/i)
+})
+
+test("an unknown pledge is not reported as unencumbered", async ({ page }) => {
+  const companies: { ticker: string; promoter_pledge_pct: number | null }[] = JSON.parse(
+    readFileSync("data/companies.json", "utf8"),
+  )
+  const unknown = companies.find((c) => c.promoter_pledge_pct === null)
+  test.skip(!unknown, "every company has pledge data")
+  await open(page, `/?view=detail&ticker=${encodeURIComponent(unknown!.ticker)}`)
+  await expect(page.getByText("Pledge data is not available for this company")).toBeVisible()
+  await expect(page.getByText("Unencumbered")).toHaveCount(0)
+})

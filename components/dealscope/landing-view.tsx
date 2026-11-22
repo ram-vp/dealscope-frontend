@@ -254,7 +254,7 @@ export function LandingView({
                 A 15% margin is ordinary in software and excellent in a factory. A single India-wide cutoff cannot tell those apart.
               </p>
             <p className="text-muted-foreground">
-                DealScope ranks each company inside its sector. 85 means 85th percentile among peers.
+                DealScope ranks each factor inside the sector: 85 on ROCE means 85th percentile among peers. The composite averages the factors.
               </p>
           </div>
         </div>
@@ -384,7 +384,7 @@ export function LandingView({
               </div>
               <span className="text-border">·</span>
               <div>
-                <span className="text-foreground font-semibold">Public</span> disclosures only
+                <span className="text-foreground font-semibold">Listed</span> and landmark deals
               </div>
               <span className="text-border">·</span>
               <div>

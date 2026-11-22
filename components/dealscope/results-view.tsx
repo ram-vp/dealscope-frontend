@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
 import { BitmapChevron } from "@/components/bitmap-chevron"
 import { ScoreRing } from "@/components/dealscope/score-ring"
 import { SectorIndustryFilter } from "@/components/dealscope/sector-industry-filter"
@@ -53,6 +52,8 @@ interface ResultsViewProps {
   onOpenWeights: () => void
   onOpenFilters: () => void
   onBack: () => void
+  showAll: boolean
+  onShowAll: () => void
   sectors: Sector[]
 }
 
@@ -82,11 +83,10 @@ export function ResultsView({
   onOpenWeights,
   onOpenFilters,
   onBack,
+  showAll,
+  onShowAll,
   sectors,
 }: ResultsViewProps) {
-  // Keyed to the list it was pressed for, so a new result set starts capped again.
-  const [expandedList, setExpandedList] = useState<Company[] | null>(null)
-  const showAll = expandedList === results
   const visibleResults = showAll ? results : results.slice(0, RENDER_CAP)
   const activeFilters = countActiveBucketFilters(filters)
 
@@ -126,7 +126,7 @@ export function ResultsView({
             {results.length === 1 ? "Company Matches" : "Companies Match"}
           </h1>
           <p className="mt-1.5 font-mono text-[11px] sm:text-xs text-muted-foreground">
-            Ranked by sector composite score · Missing metrics excluded from weighting · Unclassified tickers not scored
+            {screen.text ? "Ranked by name match, then composite score" : "Ranked by sector composite score"} · Missing metrics excluded from weighting · Unclassified tickers not scored
           </p>
         </div>
 
@@ -210,6 +210,7 @@ export function ResultsView({
         <div className="border border-border/40 p-12 sm:p-16 text-center bg-card/20">
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
             No companies match all active filters
+            {screen.text && ` and "${screen.text}"`}
           </p>
           <p className="mt-3 mx-auto max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
             Conditions combine with AND, so each one narrows the set further. Remove a chip above to
@@ -250,7 +251,7 @@ export function ResultsView({
       {!showAll && results.length > RENDER_CAP && (
         <div className="mt-8 text-center sm:text-left">
           <button
-            onClick={() => setExpandedList(results)}
+            onClick={onShowAll}
             className="border border-border bg-card/40 px-6 py-3 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-all duration-200 cursor-pointer"
           >
             Show all {results.length} results
@@ -261,7 +262,7 @@ export function ResultsView({
       {/* Footer */}
       <div className="mt-12 sm:mt-16 flex items-center justify-end">
         <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          {showAll ? "Full universe shown" : `Showing top ${Math.min(RENDER_CAP, results.length)} of ${results.length}`}
+          {showAll || results.length <= RENDER_CAP ? `Showing all ${results.length}` : `Showing top ${Math.min(RENDER_CAP, results.length)} of ${results.length}`}
         </span>
       </div>
     </section>

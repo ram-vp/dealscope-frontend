@@ -54,7 +54,9 @@ function numCell(value: number | null | undefined, decimals: number): string {
 
 function textCell(value: string | null | undefined): string {
   if (value == null || value === "") return ""
-  return csvEscape(value)
+  // Spreadsheets run cells starting with = + - @ as formulas. Text columns
+  // only: numeric cells go through numCell and keep their minus sign.
+  return csvEscape(/^[=+\-@\t\r]/.test(value) ? `'${value}` : value)
 }
 
 function dateCell(value: string | null | undefined): string {

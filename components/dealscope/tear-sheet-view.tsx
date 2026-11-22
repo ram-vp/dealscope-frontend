@@ -16,6 +16,9 @@ import {
 } from "@/lib/dealscope-data"
 import { useCompanyDetails } from "@/lib/company-details"
 import { formatAsOfDate } from "@/components/dealscope/data-freshness"
+import { displayDay, newestFirst, safeHref, valuationNotes } from "@/lib/display"
+import { isElevatedPledge } from "@/lib/ownership-badges"
+import { scoreRationale } from "@/lib/score-rationale"
 import { OwnershipBadge } from "@/components/dealscope/ownership-badges"
 import { FactorRadarChart } from "@/components/dealscope/factor-radar-chart"
 import { LoadError } from "@/components/dealscope/view-status"
@@ -39,7 +42,8 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
   const comparableCount = comparableCountForSector(company.sectorKey, deals)
   const { status: detailsStatus, retry, narrative, news: companyNews } = useCompanyDetails(company.ticker)
   const hasAbout = Boolean(narrative.about)
-  const hasWhyThisScore = Boolean(narrative.whyThisScore)
+  const notes = valuationNotes(company)
+  const weightTotal = Object.values(weights).reduce((a, b) => a + b, 0)
   const unclassified = company.sector === "Unclassified"
 
   // Ownership & pledge metrics
@@ -51,7 +55,14 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
   const pledgeVal =
     raw.promoterPledge ??
     (fin.promoterPledge && fin.promoterPledge !== "N/A" ? Number.parseFloat(fin.promoterPledge) : null)
-  const pledgeFlagged = pledgeVal != null && pledgeVal > 0
+  const pledgeFlagged = isElevatedPledge(pledgeVal)
+  const pledgeStatus = pledgeVal == null ? "Not reported" : pledgeVal > 0 ? "Encumbered" : "Unencumbered"
+  const pledgeDetail =
+    pledgeVal == null
+      ? "Pledge data is not available for this company"
+      : pledgeVal > 0
+        ? "Shares encumbered as collateral"
+        : "No reported encumbrance on promoter shares"
   const freeFloat = promoterHolding != null ? Math.max(0, Math.min(100, 100 - promoterHolding)) : null
 
   // Key Financials grid
@@ -131,7 +142,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                 Sector Avg <span className="text-accent font-medium tabular-nums">{avg == null ? "N/A" : avg}</span>
               </span>
               <span className="block text-muted-foreground/70 text-[10px] sm:text-xs mt-0.5">
-                {unclassified ? "Unclassified: not scored" : "Sector-relative · 0–100"}
+                {unclassified ? "Unclassified: not scored" : score == null ? "Too few reported factors to score" : "Sector-relative · 0–100"}
               </span>
             </div>
           </div>
@@ -142,7 +153,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
           <SectionHeader
             index="01"
             label="Key Financials"
-            subtitle={`Market Cap & Fundamentals as of ${formatAsOfDate(fin.marketCapAsOf || company.asOfDate)}`}
+            subtitle={`Market cap as of ${formatAsOfDate(fin.marketCapAsOf)} · Fundamentals as of ${formatAsOfDate(company.asOfDate)}`}
           />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5 md:gap-4">
             {financialCards.map((card) => (
@@ -197,7 +208,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                       key={factor.key}
                       label={factor.label}
                       value={company.factors[factor.key]}
-                      weight={weights[factor.key]}
+                      weight={weightTotal ? Math.round((weights[factor.key] / weightTotal) * 100) : 0}
                       metric={company.metrics[factor.metricKey]}
                       explainer={factor.explainer}
                     />
@@ -208,7 +219,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
               {/* Panel Footer */}
               <div className="mt-4 pt-3 border-t border-border/20 flex items-center justify-between font-mono text-[10px] sm:text-[11px] text-muted-foreground/60 uppercase tracking-wider">
                 <span>Sector-Relative Percentiles</span>
-                <span>Active Weights: {Object.values(weights).reduce((a, b) => a + b, 0)}%</span>
+                <span>Weights normalized to 100%</span>
               </div>
             </div>
 
@@ -237,13 +248,13 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
             <SectionHeader
               index="03"
               label="Sector Peers"
-              subtitle={`Closest 5 peers in ${company.sector} by factor correlation`}
+              subtitle={`Closest ${peers.length} peers in ${company.sector} by factor profile`}
             />
 
             {/* Closest Peers Table */}
             <div className="border border-border/40 bg-card/20 overflow-hidden">
               <div className="border-b border-border/40 bg-card/40 px-4 sm:px-5 py-2.5 font-mono text-xs uppercase tracking-wider text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                <span>Top 5 Closest Peers by Correlation</span>
+                <span>Most Similar Factor Profiles</span>
                 <span className="text-[11px] text-muted-foreground/70">Sector: {company.sector}</span>
               </div>
               {/* Desktop header */}
@@ -373,7 +384,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
               </div>
               <div className="mt-6 pt-3 border-t border-border/20 flex justify-between font-mono text-xs text-muted-foreground/60 uppercase tracking-wider">
                 <span>NSE: {company.ticker}</span>
-                <span>Corporate Overview</span>
+                <span>AI-written summary, may be dated</span>
               </div>
             </div>
 
@@ -388,26 +399,12 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                     Score: {score != null ? `${score}/100` : "N/A"}
                   </span>
                 </div>
-                {hasWhyThisScore ? (
-                  <p
-                    className="font-sans text-sm md:text-base leading-relaxed text-foreground/90 text-pretty"
-                  >
-                    {narrative.whyThisScore}
-                  </p>
-                ) : detailsStatus === "error" ? (
-                  <LoadError message="This section could not be loaded." onRetry={retry} />
-                ) : detailsStatus === "loading" ? (
-                  <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground/70 py-4">
-                    Loading rationale...
-                  </p>
-                ) : (
-                  <p className="font-mono text-xs leading-relaxed text-muted-foreground/70 py-4">
-                    Score rationale is derived directly from the sector percentile rankings above.
-                  </p>
-                )}
+                <p className="font-sans text-sm md:text-base leading-relaxed text-foreground/90 text-pretty" data-testid="score-rationale">
+                  {scoreRationale(company, weights)}
+                </p>
               </div>
               <div className="mt-6 pt-3 border-t border-border/20 flex justify-between font-mono text-xs text-muted-foreground/60 uppercase tracking-wider">
-                <span>Algorithmic screening</span>
+                <span>Calculated from the figures above</span>
                 <span>Non-advisory</span>
               </div>
             </div>
@@ -422,7 +419,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
             subtitle={`Derived from ${company.sector} listed peer multiples (P25 to P75)`}
           />
           <p className="font-mono text-xs leading-relaxed text-muted-foreground/70 max-w-3xl mb-6">
-            Two independent estimates based on listed-peer trading multiples in {company.sector} applied to this company&apos;s own earnings. EV/EBITDA values enterprise; P/E values equity.
+            Two independent estimates based on listed-peer trading multiples in {company.sector} applied to this company&apos;s own earnings. Both are shown as implied equity value.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* EV / EBITDA Card */}
@@ -433,7 +430,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                     EV / EBITDA Implied
                   </span>
                   <span className="font-mono text-xs uppercase tracking-wider text-accent border border-accent/40 bg-accent/5 px-2 py-0.5 font-medium">
-                    Enterprise Value
+                    Equity Value
                   </span>
                 </div>
                 <div className="py-5">
@@ -443,7 +440,8 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                 </div>
               </div>
               <p className="pt-3 border-t border-border/20 font-mono text-xs text-muted-foreground/70">
-                Applied against reported TTM operating earnings. Enterprise value derived from sector median trading multiples.
+                {notes.evEbitda ??
+                  "25th to 75th percentile sector EV/EBITDA applied to TTM EBITDA, less total debt."}
               </p>
             </div>
 
@@ -465,7 +463,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                 </div>
               </div>
               <p className="pt-3 border-t border-border/20 font-mono text-xs text-muted-foreground/70">
-                {company.valuation.note ||
+                {notes.pe ??
                   "Derived from 25th to 75th percentile sector P/E multiples applied to net profit. Excludes debt adjustments."}
               </p>
             </div>
@@ -512,7 +510,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                         : "border-border/60 text-muted-foreground/70",
                     )}
                   >
-                    {pledgeFlagged ? "Encumbered" : "Unencumbered"}
+                    {pledgeStatus}
                   </span>
                 </div>
                 <p
@@ -524,7 +522,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                   {fin.promoterPledge}
                 </p>
                 <span className="mt-1.5 block font-mono text-xs text-muted-foreground/70">
-                  {pledgeFlagged ? "Shares encumbered as collateral" : "No reported encumbrance on promoter shares"}
+                  {pledgeDetail}
                 </span>
               </div>
               <div>
@@ -533,14 +531,14 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                     Free Float (Est.)
                   </span>
                   <span className="font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 border border-border/60 text-muted-foreground">
-                    Liquid Float
+                    Estimate
                   </span>
                 </div>
                 <p className="mt-2.5 font-mono text-3xl md:text-4xl font-semibold tracking-tight text-foreground tabular-nums">
                   {freeFloat != null ? `${freeFloat.toFixed(1)}%` : "N/A"}
                 </p>
                 <span className="mt-1.5 block font-mono text-xs text-muted-foreground/70">
-                  Institutional &amp; public float
+                  100% less promoter &amp; insider equity
                 </span>
               </div>
             </div>
@@ -676,24 +674,32 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
         {/* 08 / Filings, Notices & News */}
         <div className="mt-12 sm:mt-16 md:mt-24 pt-10 sm:pt-12 md:pt-16 border-t border-border/30">
           <SectionHeader index="08" label="Filings, Notices & News" />
+          {detailsStatus === "error" && (
+            <LoadError message="Filings and news could not be loaded." onRetry={retry} className="mb-6" />
+          )}
+          {detailsStatus === "loading" && (
+            <p role="status" className="mb-6 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Loading filings and news...
+            </p>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-8 sm:gap-y-12">
             {/* NSE regulatory filings */}
-            <NewsColumn title="NSE Filings" count={companyNews.filings.length} emptyLabel="No recent filings found">
-              {companyNews.filings.map((f, i) => (
+            <NewsColumn title="NSE Filings" count={companyNews.filings.length} emptyLabel={detailsStatus === "ready" ? "No recent filings found" : ""}>
+              {newestFirst(companyNews.filings).map((f, i) => (
                 <NewsRow key={`${f.category}-${f.date}-${i}`} href={f.link} date={f.date} title={f.category} />
               ))}
             </NewsColumn>
 
             {/* BSE notices */}
-            <NewsColumn title="BSE Notices" count={companyNews.bseNotices.length} emptyLabel="No recent notices found">
-              {companyNews.bseNotices.map((n, i) => (
+            <NewsColumn title="BSE Notices" count={companyNews.bseNotices.length} emptyLabel={detailsStatus === "ready" ? "No recent notices found" : ""}>
+              {newestFirst(companyNews.bseNotices).map((n, i) => (
                 <NewsRow key={`${n.title}-${n.date}-${i}`} href={n.link} date={n.date} title={n.title} />
               ))}
             </NewsColumn>
 
             {/* Press / news */}
-            <NewsColumn title="News" count={companyNews.news.length} emptyLabel="No recent coverage found">
-              {companyNews.news.map((n, i) => (
+            <NewsColumn title="News" count={companyNews.news.length} emptyLabel={detailsStatus === "ready" ? "No recent coverage found" : ""}>
+              {newestFirst(companyNews.news).map((n, i) => (
                 <NewsRow key={`${n.headline}-${n.date}-${i}`} href={n.link} date={n.date} title={n.headline} source={n.source} />
               ))}
             </NewsColumn>
@@ -750,6 +756,7 @@ function FinancialCard({
     <div className="border border-border/40 bg-card/25 hover:border-border/70 transition-colors p-4 sm:p-5 flex flex-col justify-between min-h-[95px] sm:min-h-[105px]">
       <span className="font-mono text-[11px] sm:text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <span
+        data-testid={`metric-${label}`}
         className={cn(
           "font-[family-name:var(--font-bebas)] text-2xl sm:text-3xl lg:text-4xl leading-none tracking-tight break-words",
           flagged ? "text-accent" : "text-foreground",
@@ -800,15 +807,16 @@ function NewsRow({
   title: string
   source?: string
 }) {
+  const link = safeHref(href)
   return (
     <a
-      href={href}
+      href={link ?? undefined}
       target="_blank"
       rel="noopener noreferrer"
       className="group block border-b border-border/25 py-4 hover:bg-accent/5 transition-colors duration-200"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground/70">{date}</span>
+        <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground/70">{displayDay(date)}</span>
         <span
           aria-hidden="true"
           className="font-mono text-xs text-muted-foreground/70 group-hover:text-accent transition-colors duration-200"

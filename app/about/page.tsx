@@ -3,6 +3,14 @@ import Link from "next/link"
 import { Linkedin, Mail, ArrowUpRight } from "lucide-react"
 import { FUNDAMENTALS_AS_OF, PRICES_AS_OF } from "@/components/dealscope/data-freshness"
 import datasetMeta from "@/data/dataset-meta.json"
+import { getCompanies } from "@/lib/universe"
+
+const { companies, sectors } = getCompanies()
+const OPERATING_SECTORS = sectors.filter((s) => s.name !== "Unclassified").length
+const PLEDGE_REPORTED = companies.filter((c) => c.raw.promoterPledge != null)
+const UNPLEDGED_SHARE = Math.round(
+  (PLEDGE_REPORTED.filter((c) => c.raw.promoterPledge === 0).length / PLEDGE_REPORTED.length) * 100,
+)
 
 export const metadata: Metadata = {
   title: "About & Methodology: DealScope",
@@ -119,7 +127,7 @@ export default function AboutPage() {
                 In India, most screening tools are designed for general equity research with flat market-wide cutoffs (such as EBITDA margin &gt; 15% or ROCE &gt; 15%). That cross-compares unrelated business models: it favors asset-light software firms while penalizing capital-efficient manufacturers where an 11% ROCE is top-tier.
               </p>
               <p>
-                DealScope solves this by scoring every company strictly against its operating sector peers. An 85 score means 85th percentile within that sector cohort.
+                DealScope solves this by ranking every factor strictly against operating sector peers. A factor score of 85 means the 85th percentile within that sector; the composite is the weighted average of the factors.
               </p>
             </div>
 
@@ -174,13 +182,13 @@ export default function AboutPage() {
           <section id="universe" className="pt-8 border-t border-border/30">
             <SectionHeading
               title="02 / Universe & Coverage"
-              subtitle="All active NSE-listed companies across 13 operating sectors"
+              subtitle={`${datasetMeta.universe_size.toLocaleString("en-IN")} NSE-listed companies across ${OPERATING_SECTORS} operating sectors`}
             />
             <div className="space-y-3 font-sans text-sm leading-relaxed text-foreground/90 text-pretty">
               <p>
-                DealScope covers all active NSE-listed equities.
-                Market capitalization and share prices refresh daily after market close (<strong className="text-foreground font-semibold">{PRICES_AS_OF}</strong>).
-                Fundamentals reflect trailing quarterly and annual filings (<strong className="text-foreground font-semibold">{FUNDAMENTALS_AS_OF}</strong>).
+                DealScope covers {datasetMeta.universe_size.toLocaleString("en-IN")} NSE-listed equities.
+                Market capitalization refreshes after market close on trading days (<strong className="text-foreground font-semibold">{PRICES_AS_OF}</strong>).
+                Fundamentals come from Yahoo Finance&apos;s trailing figures, pulled on (<strong className="text-foreground font-semibold">{FUNDAMENTALS_AS_OF}</strong>).
               </p>
               <div className="border border-border/30 bg-card/15 p-3 mt-3.5 font-mono text-xs text-muted-foreground leading-relaxed">
                 <span className="text-foreground font-semibold">Note on {datasetMeta.unclassified_count} Unclassified Companies: </span>
@@ -276,7 +284,8 @@ export default function AboutPage() {
                 </div>
                 <div className="space-y-1.5 text-foreground/90 leading-relaxed">
                   <div>• Implied EV = EBITDA × [Sector P25–P75 EV/EBITDA]</div>
-                  <div>• Implied Equity = Implied EV − Total Debt + Cash</div>
+                  <div>• Implied Equity = Implied EV − Total Debt</div>
+                  <div>• Peer EV = Market Cap + Total Debt (cash is not netted off)</div>
                   <div className="text-muted-foreground text-[11px] pt-1.5 border-t border-border/20">
                     If Debt &gt; EV, equity value is floored at ₹0 (debt overhang).
                   </div>
@@ -310,8 +319,9 @@ export default function AboutPage() {
             />
             <div className="space-y-3 font-sans text-sm leading-relaxed text-foreground/90 text-pretty">
               <p>
-                Ownership structure determines deal feasibility. DealScope reports promoter ownership,
-                promoter encumbrances (pledges), and estimated free float directly from regulatory filings.
+                Ownership structure determines deal feasibility. Promoter ownership uses Yahoo Finance&apos;s insider holding as a proxy, and can differ from the
+                shareholding pattern filed with the exchange. Pledges come from NSE disclosures. Free float is
+                estimated as 100% less that holding.
               </p>
             </div>
 
@@ -338,7 +348,7 @@ export default function AboutPage() {
                 <div className="bg-foreground/25 h-full w-[37.6%]" />
               </div>
               <div className="mt-3 text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                <strong className="text-foreground">Pledge Telemetry:</strong> Over 85% of NSE companies have 0.0% pledge. An amber warning chip appears when pledge exceeds 10.0%.
+                <strong className="text-foreground">Pledge Telemetry:</strong> {UNPLEDGED_SHARE}% of companies with pledge data report 0.0%. An amber warning chip appears when pledge exceeds 10.0%.
               </div>
             </div>
           </section>
@@ -350,7 +360,7 @@ export default function AboutPage() {
               <p>
                 DealScope is an independent quantitative screening tool. It is not SEBI-registered investment advice,
                 not a recommendation to buy or sell securities, and not an M&amp;A advisory fairness opinion.
-                All calculations are automated from public filings. Always verify numbers independently.
+                All calculations are automated from third-party and exchange data. Always verify numbers independently.
               </p>
             </div>
           </section>

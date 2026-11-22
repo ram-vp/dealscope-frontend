@@ -25,6 +25,7 @@ import {
   computeScore,
   passesBucketFilters,
   normalizeForSearch,
+  searchByText,
 } from "@/lib/dealscope-data"
 
 /** Inclusive lower bound, exclusive-of-nothing upper bound. Both optional, so
@@ -387,8 +388,8 @@ export interface ScreenResult {
    *  relevance narrowing -- this is the number the "N companies" readout
    *  shows, so it reflects the screen rather than the typing. */
   matchCount: number
-  /** True when free text matched nothing and was ignored rather than
-   *  emptying the list. */
+  /** True when the text was only unfinished screening words ("high") and
+   *  was ignored rather than searched as a company name. */
   textFellBack: boolean
 }
 
@@ -410,7 +411,6 @@ export function runScreen(
   const matchCount = base.length
 
   const q = normalizeForSearch(f.text)
-  let pool = base
   let textFellBack = false
 
   if (q.length > 0) {
@@ -426,36 +426,16 @@ export function runScreen(
       "revenue", "sales", "roce", "roe", "pe", "pledge", "cap", "mid", "mega",
       "large", "micro", "profitable", "undervalued",
     ])
-    const allScreenish = tokens.length > 0 && tokens.every((t) => SCREENISH.has(t) || t.length <= 2)
-
-    if (allScreenish) {
-      textFellBack = true
-    } else {
-      const hits = base.filter((c) => {
-        const hay = `${normalizeForSearch(c.name)} ${normalizeForSearch(c.ticker)} ${normalizeForSearch(c.sector)}`
-        return tokens.every((t) => hay.includes(t))
-      })
-      if (hits.length > 0) {
-        pool = hits
-      } else {
-        const loose = base.filter((c) => {
-          const hay = `${normalizeForSearch(c.name)} ${normalizeForSearch(c.ticker)}`
-          return tokens.some((t) => t.length >= 3 && hay.includes(t))
-        })
-        if (loose.length > 0) {
-          pool = loose
-        } else {
-          textFellBack = true
-        }
-      }
-    }
+    textFellBack = tokens.every((t) => SCREENISH.has(t))
+    // Text is ranked by relevance first, then score.
+    if (!textFellBack) return { results: searchByText(base, f.text, weights), matchCount, textFellBack }
   }
 
   // Score once per company, then sort on the cached number. Scoring inside the
   // comparator recomputed it on every comparison -- ~26k comparisons for the
   // full universe, so ~52k computeScore calls per keystroke instead of 2,381.
   // Identical ordering, just without the redundant work on the typing path.
-  const scored = pool.map((c) => ({ c, s: computeScore(c.factors, weights) }))
+  const scored = base.map((c) => ({ c, s: computeScore(c.factors, weights) }))
   scored.sort((a, b) => {
     if (a.s == null && b.s == null) return 0
     if (a.s == null) return 1

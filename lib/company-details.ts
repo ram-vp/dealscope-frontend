@@ -6,7 +6,6 @@ import { detailPath } from "@/lib/data-paths"
 
 export interface CompanyNarrative {
   about: string | null
-  whyThisScore: string | null
 }
 
 export interface CompanyDetails {
@@ -15,7 +14,7 @@ export interface CompanyDetails {
 }
 
 const EMPTY: CompanyDetails = {
-  narrative: { about: null, whyThisScore: null },
+  narrative: { about: null },
   news: { filings: [], bseNotices: [], news: [] },
 }
 
