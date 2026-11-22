@@ -6,7 +6,12 @@ allowBuilds:
   # unresolved "set this to true or false" placeholder when eslint was added;
   # answering it explicitly keeps `pnpm install` from prompting again.
   unrs-resolver: false
+# One day, as CI's pnpm enforces. Explicit because a developer's global config
+# can turn it off, and then the lockfile only fails once it reaches CI.
+minimumReleaseAge: 1440
 overrides:
+  # lighthouse's ^3.0.1 resolved to a release less than a day old (21 Nov 2026).
+  robots-parser: 3.0.1
   # Dev-only, reached through eslint-config-next -> typescript-eslint, which
   # still asks for ^10. 10.x has no patched release. Remove once that range moves.
   "minimatch@^10": ^11.0.1

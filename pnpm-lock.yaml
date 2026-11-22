@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  robots-parser: 3.0.1
   minimatch@^10: ^11.0.1
 
 importers:
@@ -1726,6 +1727,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -2565,8 +2567,8 @@ packages:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
 
-  robots-parser@3.1.1:
-    resolution: {integrity: sha512-ltsI9/0CiaaZpnJeLT4vwK86cW1AfSXoBgnQHIaCtBrg4K8UckV7HakNzWfG8UvT2hqwrLZ1YWilWMEiynBg6g==}
+  robots-parser@3.0.1:
+    resolution: {integrity: sha512-s+pyvQeIKIZ0dx5iJiQk1tPLJAWln39+MI5jtM8wnyws+G5azk+dMnMX0qfbqNetKKNgcWWOdi0sfm+FbQbgdQ==}
     engines: {node: '>=10.0.0'}
 
   rolldown@1.2.19:
@@ -5157,7 +5159,7 @@ snapshots:
       lighthouse-stack-packs: 1.12.3
       open: 11.0.4
       puppeteer-core: 25.18.1
-      robots-parser: 3.1.1
+      robots-parser: 3.0.1
       speedline-core: 1.4.3
       third-party-web: 0.30.0
       tldts-icann: 7.5.5
@@ -5550,7 +5552,7 @@ snapshots:
 
   reusify@1.1.0: {}
 
-  robots-parser@3.1.1: {}
+  robots-parser@3.0.1: {}
 
   rolldown@1.2.19:
     dependencies:
