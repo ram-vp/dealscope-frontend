@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { buttonClass } from "@/components/ui/button"
+import { PRIMARY_ACTION, SECONDARY_ACTION } from "@/components/site/styles"
 import { StatusPage } from "@/components/site/status-page"
 
 export const metadata: Metadata = {
@@ -16,10 +16,10 @@ export default function NotFound() {
       title="Page not found"
       message="That address doesn't match a page. Company tear sheets open from the screener: search by name or NSE ticker."
     >
-      <Link href="/" className={buttonClass("primary")}>
+      <Link href="/" className={PRIMARY_ACTION}>
         Open the screener
       </Link>
-      <Link href="/about" className={buttonClass()}>
+      <Link href="/about" className={SECONDARY_ACTION}>
         Read the methodology
       </Link>
     </StatusPage>

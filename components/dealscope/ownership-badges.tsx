@@ -1,28 +1,48 @@
-import { Chip } from "@/components/ui/chip"
-import { isElevatedPledge, ownershipBadgeLabel, ownershipBadgeTitle } from "@/lib/ownership-badges"
+import { cn } from "@/lib/utils"
+import {
+  isElevatedPledge,
+  ownershipBadgeLabel,
+  ownershipBadgeTitle,
+} from "@/lib/ownership-badges"
 
 /**
  * Native DealScope chip: PROM / PLG percents already on the company record.
- * Elevated pledge (> 10%) uses the accent tone: factual emphasis, not a
- * warning product.
+ * Row variant matches pass-reason chips; header variant matches the NSE chip.
+ * Elevated pledge (> 10%) uses the same accent border already used for
+ * "good" reason chips: factual emphasis, not a warning product.
  */
 export function OwnershipBadge({
   holding,
   pledge,
+  variant = "row",
   className,
 }: {
   holding: number | null | undefined
   pledge: number | null | undefined
+  variant?: "row" | "header"
   className?: string
 }) {
   const label = ownershipBadgeLabel(holding, pledge)
   if (!label) return null
+  const flagged = isElevatedPledge(pledge)
   const title = ownershipBadgeTitle(holding, pledge)
 
   return (
-    <Chip tone={isElevatedPledge(pledge) ? "accent" : "neutral"} title={title} className={className}>
+    <span
+      title={title}
+      className={cn(
+        "inline-flex items-center border font-mono text-xs uppercase",
+        variant === "header" ? "px-3 py-1 tracking-widest" : "px-2 py-1 tracking-wider",
+        flagged
+          ? "border-accent/40 text-accent/90"
+          : variant === "header"
+            ? "border-border text-muted-foreground"
+            : "border-border/60 text-muted-foreground",
+        className,
+      )}
+    >
       <span aria-hidden="true">{label}</span>
       <span className="sr-only">{title}</span>
-    </Chip>
+    </span>
   )
 }

@@ -1,45 +1,59 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useId, useRef } from "react"
-import { X } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useRef, useState } from "react"
 
-interface DialogProps {
-  open: boolean
-  onClose: () => void
-  eyebrow: string
-  title: string
-  closeLabel: string
-  footer: React.ReactNode
-  children: React.ReactNode
-}
+const EXIT_MS = 250
 
 /**
- * Right-hand drawer on a native <dialog>. showModal() makes the rest of the
- * page inert, which is the focus trap, and puts it in the top layer. What the
- * platform doesn't cover is handled here: returning focus to the trigger and
- * closing on a backdrop click. Body scroll lock is in globals.css.
+ * Right-hand drawer on a native <dialog>: showModal() is the focus trap and
+ * makes the page behind inert. The dialog itself is an invisible full-screen
+ * box; what you see is the backdrop and panel inside it.
  */
-export function Dialog({ open, onClose, eyebrow, title, closeLabel, footer, children }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  label,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  label: string
+  children: React.ReactNode
+}) {
   const ref = useRef<HTMLDialogElement>(null)
-  const titleId = useId()
+  const panelRef = useRef<HTMLElement>(null)
+  // Stays mounted for the slide-out.
+  const [mounted, setMounted] = useState(open)
+  if (open && !mounted) setMounted(true)
+
+  useEffect(() => {
+    if (open || !mounted) return
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const timer = setTimeout(() => setMounted(false), reduced ? 0 : EXIT_MS)
+    return () => clearTimeout(timer)
+  }, [open, mounted])
 
   useEffect(() => {
     const dialog = ref.current
-    if (!open || !dialog) return
+    if (!mounted || !dialog) return
     const trigger = document.activeElement as HTMLElement | null
     dialog.showModal()
+    // Focus the panel, so no button wears a focus ring just for having opened it.
+    panelRef.current?.focus({ preventScroll: true })
+    document.body.style.overflow = "hidden"
     return () => {
       dialog.close()
+      document.body.style.overflow = ""
       if (trigger?.isConnected) trigger.focus({ preventScroll: true })
     }
-  }, [open])
+  }, [mounted])
 
   return (
     <dialog
       ref={ref}
-      aria-labelledby={titleId}
+      aria-label={label}
+      data-closing={!open || undefined}
       onCancel={(e) => {
         e.preventDefault()
         onClose()
@@ -48,32 +62,26 @@ export function Dialog({ open, onClose, eyebrow, title, closeLabel, footer, chil
         // The browser can close it without a cancel event (a second Esc).
         if (open && !ref.current?.open) onClose()
       }}
-      onClick={(e) => {
-        // The panel fills the dialog, so only a backdrop click targets it.
-        if (e.target === e.currentTarget) onClose()
-      }}
-      className="ds-drawer fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-full max-w-lg border-l border-border bg-background p-0 text-foreground"
+      className="ds-drawer fixed inset-0 m-0 h-full max-h-none w-full max-w-none overflow-hidden bg-transparent p-0 text-foreground"
     >
-      {open && (
-        <div className="flex h-full flex-col">
-          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border p-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:p-8">
-            <div className="min-w-0">
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">{eyebrow}</p>
-              <h2 id={titleId} className="mt-2 font-display text-3xl uppercase tracking-tight sm:text-4xl">
-                {title}
-              </h2>
-            </div>
-            <Button onClick={onClose} aria-label={closeLabel} className="min-w-11 shrink-0 px-0">
-              <X aria-hidden="true" className="h-4 w-4" />
-            </Button>
-          </div>
+      {mounted && (
+        <>
+          {/* Backdrop */}
+          <div className="ds-drawer-backdrop fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
-          <div className="flex-1 overflow-y-auto overscroll-contain p-5 sm:p-8">{children}</div>
+          {/* Panel */}
+          <section
+            ref={panelRef}
+            tabIndex={-1}
+            data-lenis-prevent
+            className="ds-drawer-panel fixed right-0 top-0 z-[70] h-full w-full max-w-lg bg-background border-l border-border flex flex-col shadow-2xl"
+          >
+            {children}
+          </section>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
-            {footer}
-          </div>
-        </div>
+          {/* The top layer sits above the page's grain, so it carries its own. */}
+          <div className="noise-overlay" aria-hidden="true" />
+        </>
       )}
     </dialog>
   )

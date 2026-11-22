@@ -1,4 +1,5 @@
 import type React from "react"
+import { PAGE_TITLE } from "@/components/site/styles"
 
 export function StatusPage({
   code,
@@ -12,11 +13,13 @@ export function StatusPage({
   children: React.ReactNode
 }) {
   return (
-    <section className="mx-auto flex min-h-[70dvh] w-full max-w-2xl flex-col justify-center px-4 py-16 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">{code}</p>
-      <h1 className="mt-4 font-display text-5xl uppercase leading-none tracking-tight sm:text-7xl">{title}</h1>
-      <p className="mt-6 text-base leading-relaxed text-muted-foreground">{message}</p>
-      <div className="mt-8 flex flex-wrap gap-3">{children}</div>
+    <section className="relative min-h-[70dvh] px-4 sm:px-6 md:px-10 lg:px-16 py-10 md:py-16 bg-background text-foreground">
+      <div className="relative z-10 max-w-4xl mx-auto">
+        <span className="font-mono text-xs uppercase tracking-[0.3em] text-accent">{code}</span>
+        <h1 className={`mt-3 ${PAGE_TITLE}`}>{title}</h1>
+        <p className="mt-3 font-sans text-sm sm:text-base leading-relaxed text-foreground/90 text-pretty">{message}</p>
+        <div className="mt-6 flex flex-wrap gap-3">{children}</div>
+      </div>
     </section>
   )
 }

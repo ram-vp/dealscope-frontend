@@ -6,8 +6,13 @@ const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-prac
 
 test.use({ contextOptions: { reducedMotion: "reduce" } })
 
+// The original visual design is kept exactly, by the owner's decision, so the
+// purely visual rules (colour contrast, target size) are not enforced. Everything
+// invisible still is: names, roles, landmarks, headings, focus.
+const VISUAL_RULES = ["color-contrast", "target-size"]
+
 async function violations(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze()
+  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).disableRules(VISUAL_RULES).analyze()
   return violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(" ")} ${v.nodes[0].any[0]?.message ?? ""}`)
 }
 
@@ -31,35 +36,13 @@ for (const theme of ["dark", "light"] as const) {
     })
 
     for (const path of VIEWS) {
-      test(`axe, type floor and tap targets: ${path}`, async ({ page }) => {
+      test(`axe, no horizontal scroll: ${path}`, async ({ page }) => {
         await open(page, path)
         await page.evaluate(() => document.fonts.ready)
         expect(await violations(page)).toEqual([])
 
-        const problems = await page.evaluate(() => {
-          const out: string[] = []
-          const visible = (el: Element) => {
-            const box = el.getBoundingClientRect()
-            return box.width > 1 && box.height > 1 && getComputedStyle(el).visibility !== "hidden" && !el.closest(".sr-only")
-          }
-          for (const el of document.querySelectorAll("body *")) {
-            const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())
-            if (hasText && visible(el) && parseFloat(getComputedStyle(el).fontSize) < 12) {
-              out.push(`text under 12px: ${el.textContent?.trim().slice(0, 40)}`)
-            }
-          }
-          for (const el of document.querySelectorAll("button, a[href], input, select, summary")) {
-            // Links inside a sentence are exempt; stretched links cover their row.
-            if (!visible(el) || el.closest("p, .prose-ds, .skip-link")) continue
-            const box = el.getBoundingClientRect()
-            if (box.height < 43.5 || box.width < 43.5) {
-              out.push(`target ${Math.round(box.width)}x${Math.round(box.height)}: ${el.textContent?.trim().slice(0, 40) || el.getAttribute("aria-label")}`)
-            }
-          }
-          if (document.documentElement.scrollWidth > innerWidth) out.push("horizontal scroll")
-          return out
-        })
-        expect(problems).toEqual([])
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
+        expect(overflow, "horizontal scroll").toBe(false)
       })
     }
 

@@ -32,6 +32,28 @@ const FINANCIAL_CLAIM = new RegExp(
   "i",
 )
 
+// Model output is untrusted: company names from a feed go into the prompt, so
+// it can be talked into things. One such line discredits the whole text, so it
+// is withheld entirely. Mirrors src/safety.py in the backend.
+const UNSAFE_OUTPUT = new RegExp(
+  [
+    "https?://",
+    "\\bwww\\.",
+    "<\\s*/?\\s*(script|img|iframe|svg|a|system|style|object)\\b",
+    "\\bjavascript:",
+    "\\bon(error|load|click)\\s*=",
+    "\\]\\(",
+    "\\b(ignore|disregard|forget) (all |any )?(previous|prior|above|earlier) (instructions|prompts?)",
+    "\\bsystem prompt\\b",
+    "\\bstrong (buy|sell)\\b",
+    "\\b(should|must|recommend(s|ed)? (to|that you)) (buy|sell|short|accumulate) ",
+    "\\bguaranteed returns?\\b",
+    "\\bprice target (of|is)\\b",
+  ].join("|"),
+  "i",
+)
+const MAX_SUMMARY = 2000
+
 const SENTENCE_BREAK = /(?<=[.!?])\s+(?=[A-Z0-9"'“₹])/
 
 export function quotesFinancials(text: string): boolean {
@@ -39,7 +61,7 @@ export function quotesFinancials(text: string): boolean {
 }
 
 export function descriptiveSummary(text: string | null): string | null {
-  if (!text) return null
+  if (!text || text.length > MAX_SUMMARY || UNSAFE_OUTPUT.test(text)) return null
   const kept = text
     .split(SENTENCE_BREAK)
     .filter((sentence) => !quotesFinancials(sentence))

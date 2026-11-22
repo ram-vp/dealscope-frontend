@@ -30,6 +30,8 @@ import {
   type ScreenFilters,
   type NumericConstraint,
   type NumericFieldKey,
+  MAX_QUERY_LENGTH,
+  isUsableNumber,
   makeScreen,
 } from "@/lib/screener"
 
@@ -297,6 +299,7 @@ function mergeConstraint(
   key: NumericFieldKey,
   c: NumericConstraint,
 ) {
+  if ((c.min != null && !isUsableNumber(c.min)) || (c.max != null && !isUsableNumber(c.max))) return
   const cur = into[key] ?? {}
   into[key] = {
     ...cur,
@@ -341,7 +344,7 @@ export function parseQuery(raw: string): ParseResult {
 
   if (!raw || !raw.trim()) return { filters, recognised: false, matched }
 
-  let q = normalizeQuery(raw)
+  let q = normalizeQuery(raw.slice(0, MAX_QUERY_LENGTH))
 
   /** Run `note` on every match. Returning false means "I did not understand
    *  this", and the matched text is put back so a later rule still gets a

@@ -23,7 +23,7 @@ export function DealScopeLogo({ className, size = 30 }: DealScopeLogoProps) {
     <Link
       href="/"
       className={cn(
-        "group inline-flex h-11 w-11 items-center justify-center shrink-0 select-none text-accent hover:opacity-85 transition-opacity duration-150 min-w-11",
+        "group inline-flex items-center justify-center shrink-0 select-none text-accent hover:opacity-85 transition-opacity duration-150 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-accent",
         className,
       )}
       aria-label="DealScope home"

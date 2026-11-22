@@ -33,6 +33,8 @@ import {
   type NumericFieldKey,
   type NumericConstraint,
   NUMERIC_FIELD_KEYS,
+  MAX_QUERY_LENGTH,
+  isUsableNumber,
   makeScreen,
 } from "@/lib/screener"
 import {
@@ -68,8 +70,8 @@ function decodeNumeric(raw: string): Partial<Record<NumericFieldKey, NumericCons
     const c: NumericConstraint = {}
     const min = Number(lo)
     const max = Number(hi)
-    if (lo !== "" && lo != null && Number.isFinite(min)) c.min = min
-    if (hi !== "" && hi != null && Number.isFinite(max)) c.max = max
+    if (lo !== "" && lo != null && isUsableNumber(min)) c.min = min
+    if (hi !== "" && hi != null && isUsableNumber(max)) c.max = max
     if (c.min != null || c.max != null) out[key as NumericFieldKey] = c
   }
   return out
@@ -94,9 +96,11 @@ function decodeBands(raw: string, industries: string[]): BucketFilters {
   for (const entry of raw.split(",")) {
     const [key, value] = entry.split(":")
     if (!key || !value || !BUCKET_KEYS.has(key)) continue
+    // Only real band keys: anything else was shown verbatim as a filter chip.
+    const known = new Set(BUCKET_FIELDS.find((f) => f.key === key)?.buckets.map((b) => b.key))
     if (MULTI_BUCKET_KEYS.has(key)) {
-      ;(out as unknown as Record<string, string[]>)[key] = value.split("|").filter(Boolean)
-    } else {
+      ;(out as unknown as Record<string, string[]>)[key] = [...new Set(value.split("|"))].filter((v) => known.has(v))
+    } else if (known.has(value)) {
       ;(out as unknown as Record<string, string>)[key] = value
     }
   }
@@ -104,6 +108,9 @@ function decodeBands(raw: string, industries: string[]): BucketFilters {
 }
 
 const LIST_SEP = "~"
+/** Enough for every industry at once. */
+const MAX_LIST_LENGTH = 8000
+const MAX_TICKER_LENGTH = 32
 
 /** Sector and industry names contain commas ("Metals, Mining & Materials") and
  *  ampersands, so a comma-joined list would corrupt them on the way back. `~`
@@ -112,7 +119,7 @@ function encodeList(values: string[]): string {
   return values.join(LIST_SEP)
 }
 function decodeList(raw: string): string[] {
-  return raw ? raw.split(LIST_SEP).filter(Boolean) : []
+  return raw ? raw.slice(0, MAX_LIST_LENGTH).split(LIST_SEP).filter(Boolean) : []
 }
 
 /** `w=40-20-20-20`, in FACTOR_KEYS order, omitted at the defaults. Without it
@@ -165,10 +172,10 @@ export function encodeUrlState(state: UrlState): string {
 
 /** Total inverse of encodeUrlState. Never throws. */
 export function decodeUrlState(sp: URLSearchParams): UrlState {
-  const ticker = (sp.get("ticker") ?? "").trim() || null
+  const ticker = (sp.get("ticker") ?? "").trim().slice(0, MAX_TICKER_LENGTH) || null
   const industries = decodeList(sp.get("ind") ?? "")
   const screen = makeScreen({
-    text: sp.get("q") ?? "",
+    text: (sp.get("q") ?? "").slice(0, MAX_QUERY_LENGTH),
     sectors: decodeList(sp.get("sectors") ?? ""),
     industries,
     numeric: decodeNumeric(sp.get("num") ?? ""),

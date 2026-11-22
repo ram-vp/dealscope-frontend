@@ -92,6 +92,16 @@ export function formatFieldValue(key: NumericFieldKey, v: number): string {
  * nothing. That is the "never leave the system broken" guarantee -- the new
  * layer can only ever *add* constraints, never reinterpret the old ones.
  */
+/** No real value comes near this (the largest market cap is ~2e6 Cr). Beyond
+ *  it an input is hostile: Infinity, 1e300, a 400-digit paste. */
+export const MAX_FILTER_VALUE = 1e9
+/** Free text past this is never a company or a screen, only a way to hang the tab. */
+export const MAX_QUERY_LENGTH = 200
+
+export function isUsableNumber(v: number): boolean {
+  return Number.isFinite(v) && Math.abs(v) <= MAX_FILTER_VALUE
+}
+
 export interface ScreenFilters {
   /** Residual free text (company / ticker name search) after the parser has
    *  consumed everything it recognised as a constraint. */
