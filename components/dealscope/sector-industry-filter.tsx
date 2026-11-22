@@ -148,6 +148,9 @@ export function SectorIndustryFilter({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${totalIndustries} industries…`}
               aria-label="Search industries"
+              name="industry-search"
+              autoComplete="off"
+              spellCheck={false}
               autoFocus
               className="w-full bg-transparent px-4 py-3 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-accent"
             />

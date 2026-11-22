@@ -256,6 +256,9 @@ function IndustryFilterControl({
           onKeyDown={handleKeyDown}
           placeholder={`Search ${totalCount} industries…`}
           aria-label="Search industries"
+          name="industry-filter"
+          autoComplete="off"
+          spellCheck={false}
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={flatList.length > 0}

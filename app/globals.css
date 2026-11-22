@@ -9,6 +9,7 @@
    ========================================================================= */
 
 :root {
+  color-scheme: light;
   /* Warm Technical Parchment Light Theme (Editorial / FT / Financial Terminal Paper) */
   --background: oklch(0.965 0.008 85);
   --foreground: oklch(0.18 0.015 60);
@@ -36,6 +37,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   /* Institutional Slate Obsidian Luxury Dark Theme */
   --background: oklch(0.11 0.012 250);
   --foreground: oklch(0.97 0 0);
@@ -110,6 +112,10 @@
     padding-right: env(safe-area-inset-right);
     scrollbar-width: thin;
     transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  :is(button, a, input, [role="option"]) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: color-mix(in oklab, var(--accent) 15%, transparent);
   }
   :focus-visible {
     outline: 2px solid var(--accent);

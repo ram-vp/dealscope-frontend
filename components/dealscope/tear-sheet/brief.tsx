@@ -50,11 +50,11 @@ export function CompanyBrief({
               <LoadError message="This section could not be loaded." onRetry={retry} />
             ) : detailsStatus === "loading" ? (
               <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground py-4">
-                Loading profile...
+                Loading profile…
               </p>
             ) : (
               <p className="font-mono text-xs leading-relaxed text-muted-foreground py-4">
-                Company profile is currently being compiled. Financial metrics and factor rankings above are live.
+                No company summary is available. The financials and rankings above don&apos;t depend on it.
               </p>
             )}
           </div>

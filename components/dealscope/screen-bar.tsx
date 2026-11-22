@@ -107,6 +107,7 @@ export function ScreenBar({
             placeholder={placeholder}
             aria-label="Search company or ticker"
             enterKeyHint="search"
+            name="screen"
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}

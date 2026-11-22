@@ -1,6 +1,7 @@
 import narrativesData from "@/data/narratives.json"
 import newsData from "@/data/news.json"
 import { asString, type CompanyNews } from "@/lib/dealscope-data"
+import { descriptiveSummary } from "@/lib/descriptive-summary"
 import type { CompanyDetails } from "@/lib/company-details"
 import { DETAIL_SHARDS, detailShard } from "@/lib/data-paths"
 
@@ -42,7 +43,7 @@ function buildShards(): Record<string, CompanyDetails>[] {
     shards[detailShard(ticker)][ticker] = {
       // why_this_score is not shipped: it quotes the snapshot it was written
       // from. lib/score-rationale.ts writes it from the live numbers instead.
-      narrative: { about: asString(entry?.about) },
+      narrative: { about: descriptiveSummary(asString(entry?.about)) },
       news: news.get(ticker) ?? normalizeNewsEntry(null),
     }
   }

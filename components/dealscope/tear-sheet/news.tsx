@@ -23,7 +23,7 @@ export function FilingsAndNews({
       )}
       {detailsStatus === "loading" && (
         <p role="status" className="mb-6 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-          Loading filings and news...
+          Loading filings and news…
         </p>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-8 sm:gap-y-12">
