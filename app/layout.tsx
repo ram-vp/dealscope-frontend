@@ -71,7 +71,6 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          <div className="noise-overlay" aria-hidden="true" />
           <header className="sticky top-0 z-40 w-full border-b border-border bg-background pt-[env(safe-area-inset-top)]">
             <div className="mx-auto flex min-h-14 max-w-7xl items-center justify-between gap-2 px-3 py-1.5 sm:gap-4 sm:px-6 md:px-10">
               <div className="flex min-w-0 items-center gap-2.5 sm:gap-6">

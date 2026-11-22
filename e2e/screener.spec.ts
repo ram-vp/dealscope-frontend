@@ -7,7 +7,7 @@ test("search by ticker, open the tear sheet, come back and go forward", async ({
   await searchBox(page).fill("TCS")
   await searchBox(page).press("Enter")
   await expect(page).toHaveURL(/view=results.*q=tcs/i)
-  await resultRows(page).filter({ hasText: "Tata Consultancy" }).getByRole("button").click()
+  await resultRows(page).filter({ hasText: "Tata Consultancy" }).getByRole("link").click()
   await expect(page).toHaveURL(/view=detail.*ticker=TCS/)
   await expect(pageTitle(page)).toContainText(/tata consultancy/i)
 
@@ -126,7 +126,7 @@ test("tear sheet loads the narrative and links between peers", async ({ page }) 
   await expect(page.getByText(/Reliance Industries .{60,}/).first()).toBeVisible()
   const title = pageTitle(page)
   const before = await title.innerText()
-  await page.locator("button").filter({ hasText: /Margin: |\d+ \/ 100/ }).first().click()
+  await page.locator('main a[href*="ticker="]').first().click()
   await expect(title).not.toHaveText(before)
 })
 

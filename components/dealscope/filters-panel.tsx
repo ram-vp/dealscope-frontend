@@ -1,8 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useMemo, useState } from "react"
+import { useId, useMemo, useState } from "react"
+import { Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Eyebrow } from "@/components/ui/section"
+import { Toggle } from "@/components/ui/toggle"
 import { Dialog } from "@/components/ui/dialog"
 import {
   type BucketFilters,
@@ -81,7 +84,7 @@ export function FiltersPanel({
       <div className="mt-10 flex flex-col gap-10">
         {GROUPS.map((group) => (
           <div key={group.index}>
-            <SectionLabel index={group.index} label={group.label} />
+            <Eyebrow index={group.index} label={group.label} />
             <div className="mt-5 flex flex-col gap-7">
               {group.fields.map((key) => (
                 <FieldControl
@@ -97,7 +100,7 @@ export function FiltersPanel({
 
         {/* Industry */}
         <div>
-          <SectionLabel index="04" label="Industry Groups" />
+          <Eyebrow index="04" label="Industry Groups" />
           <div className="mt-5">
             <IndustryFilterControl
               industryGroups={industryGroups}
@@ -111,15 +114,6 @@ export function FiltersPanel({
   )
 }
 
-// Reuses the tear sheet's SectionLabel pattern for consistency.
-function SectionLabel({ index, label }: { index: string; label: string }) {
-  return (
-    <span className="font-mono text-xs uppercase tracking-[0.3em] text-accent">
-      {index} / {label}
-    </span>
-  )
-}
-
 function FieldControl({
   def,
   selection,
@@ -129,11 +123,12 @@ function FieldControl({
   selection: string[] | string | null
   onChange: (next: string[] | string | null) => void
 }) {
+  const labelId = useId()
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-3">
-        <label className="font-mono text-[11px] uppercase tracking-[0.2em] text-foreground">{def.label}</label>
-        <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
+    <div role="group" aria-labelledby={labelId}>
+      <div className="flex items-baseline justify-between gap-2 mb-3">
+        <span id={labelId} className="font-mono text-xs uppercase tracking-[0.2em] text-foreground">{def.label}</span>
+        <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           {def.select === "multi" ? "Select any" : "Select one"}
         </span>
       </div>
@@ -165,32 +160,12 @@ function PillGroup({
   }
   return (
     <div className="flex flex-wrap gap-2">
-      {def.buckets.map((b) => {
-        const active = selected.includes(b.key)
-        return (
-          <button
-            key={b.key}
-            onClick={() => toggle(b.key)}
-            aria-pressed={active}
-            className={cn(
-              "inline-flex items-baseline gap-2 border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-all duration-200",
-              active
-                ? "border-accent text-accent"
-                : "border-border text-muted-foreground hover:border-accent hover:text-accent",
-            )}
-          >
-            <span>{b.name}</span>
-            <span
-              className={cn(
-                "text-[11px] normal-case tracking-normal",
-                active ? "text-accent/70" : "text-muted-foreground/80",
-              )}
-            >
-              {b.range}
-            </span>
-          </button>
-        )
-      })}
+      {def.buckets.map((b) => (
+        <Toggle key={b.key} pressed={selected.includes(b.key)} onClick={() => toggle(b.key)}>
+          <span>{b.name}</span>{" "}
+          <span className="normal-case tracking-normal">{b.range}</span>
+        </Toggle>
+      ))}
     </div>
   )
 }
@@ -217,7 +192,9 @@ function IndustryFilterControl({
   onChange: (next: string[]) => void
 }) {
   const [query, setQuery] = useState("")
-  const [highlighted, setHighlighted] = useState(0)
+  // -1 until the arrow keys are used or a query is typed.
+  const [highlighted, setHighlighted] = useState(-1)
+  const listId = useId()
   const totalCount = useMemo(() => industryGroups.reduce((n, g) => n + g.industries.length, 0), [industryGroups])
 
   const filteredGroups = useMemo(() => filterIndustryGroups(industryGroups, query), [industryGroups, query])
@@ -230,17 +207,16 @@ function IndustryFilterControl({
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
-    setHighlighted(0)
+    setHighlighted(value.trim() ? 0 : -1)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (flatList.length === 0) return
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault()
-      setHighlighted((i) => Math.min(i + 1, flatList.length - 1))
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setHighlighted((i) => Math.max(i - 1, 0))
+      const next = Math.max(0, Math.min(flatList.length - 1, highlighted + (e.key === "ArrowDown" ? 1 : -1)))
+      setHighlighted(next)
+      document.getElementById(`${listId}-${next}`)?.scrollIntoView({ block: "nearest" })
     } else if (e.key === "Enter") {
       e.preventDefault()
       const pick = flatList[highlighted]
@@ -248,7 +224,11 @@ function IndustryFilterControl({
     }
   }
 
-  let rowIndex = -1
+  // Each group's offset into flatList, for aria-activedescendant.
+  const groupStarts = filteredGroups.map((group, g) => ({
+    group,
+    start: filteredGroups.slice(0, g).reduce((n, earlier) => n + earlier.industries.length, 0),
+  }))
 
   return (
     <div>
@@ -258,11 +238,11 @@ function IndustryFilterControl({
             <button
               key={name}
               onClick={() => toggle(name)}
-              className="inline-flex items-center gap-2 border border-accent bg-accent/10 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-accent hover:bg-accent/20 transition-colors duration-200"
+              className="inline-flex items-center gap-2 border border-accent bg-accent/10 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-accent hover:bg-accent/20 transition-colors duration-200 min-h-11 min-w-11"
             >
               <span>{name}</span>
-              <span aria-hidden="true">×</span>
-              <span className="sr-only">Remove {name} filter</span>
+              <X aria-hidden="true" className="h-3.5 w-3.5" />
+              <span className="sr-only">(remove filter)</span>
             </button>
           ))}
         </div>
@@ -277,64 +257,68 @@ function IndustryFilterControl({
           placeholder={`Search ${totalCount} industries…`}
           aria-label="Search industries"
           role="combobox"
+          aria-autocomplete="list"
           aria-expanded={flatList.length > 0}
-          aria-controls="industry-listbox"
-          className="w-full bg-transparent px-3 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+          aria-controls={flatList.length > 0 ? listId : undefined}
+          aria-activedescendant={highlighted >= 0 && highlighted < flatList.length ? `${listId}-${highlighted}` : undefined}
+          className="w-full bg-transparent px-3 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground"
         />
       </div>
 
-      <div id="industry-listbox" role="listbox" className="mt-2 max-h-56 overflow-y-auto border border-border/50">
-        {flatList.length === 0 ? (
-          <p className="px-3 py-4 font-mono text-xs text-muted-foreground/80 text-center">
-            No industries match &quot;{query}&quot;
-          </p>
-        ) : (
-          filteredGroups.map((group) => (
-            <div key={group.sector} className="border-b border-border/30 last:border-b-0">
-              <div className="sticky top-0 bg-background px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
+      {flatList.length === 0 ? (
+        <p role="status" className="mt-2 border border-border px-3 py-4 text-center font-mono text-xs text-muted-foreground">
+          No industries match &quot;{query}&quot;
+        </p>
+      ) : (
+        <div
+          id={listId}
+          role="listbox"
+          aria-label="Industries"
+          aria-multiselectable="true"
+          tabIndex={-1}
+          className="mt-2 max-h-64 overflow-y-auto border border-border"
+        >
+          {groupStarts.map(({ group, start }) => (
+            <div key={group.sector} role="group" aria-label={group.sector}>
+              <div aria-hidden="true" className="sticky top-0 bg-background px-3 py-1.5 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 {group.sector}
               </div>
-              <div className="divide-y divide-border/20">
-                {group.industries.map((ind) => {
-                  rowIndex += 1
-                  const isHighlighted = rowIndex === highlighted
-                  const active = selected.includes(ind.name)
-                  return (
-                    <button
-                      key={ind.name}
-                      onClick={() => toggle(ind.name)}
-                      onMouseEnter={() => setHighlighted(rowIndex)}
-                      aria-pressed={active}
-                      className={cn(
-                        "w-full flex items-center justify-between gap-3 px-3 py-2.5 font-mono text-[11px] text-left transition-colors duration-200",
-                        active
-                          ? "bg-accent/10 text-accent"
-                          : isHighlighted
-                            ? "bg-foreground/5 text-foreground"
-                            : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
-                      )}
-                    >
-                      <span className="truncate">{ind.name}</span>
-                      <span
-                        className={cn("text-[11px] shrink-0", active ? "text-accent/70" : "text-muted-foreground/80")}
-                      >
-                        {ind.count}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              {group.industries.map((ind, i) => {
+                const index = start + i
+                const active = selected.includes(ind.name)
+                return (
+                  // Focus stays in the combobox; arrows and Enter operate the options.
+                  <div
+                    key={ind.name}
+                    id={`${listId}-${index}`}
+                    role="option"
+                    aria-selected={active}
+                    onClick={() => toggle(ind.name)}
+                    onMouseEnter={() => setHighlighted(index)}
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-center justify-between gap-3 px-3 py-2 font-mono text-xs",
+                      index === highlighted && "outline-2 -outline-offset-2 outline-accent",
+                      active ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      {active && <Check aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}
+                      {ind.name}
+                    </span>
+                    <span>{ind.count}</span>
+                  </div>
+                )
+              })}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-// Single-select, fill-active connected control. Segments share borders and
-// stack name over range so the real units fit without horizontal overflow on
-// narrow screens. Clicking the active segment clears the field back to null.
+// Single-select, fill-active control. Two columns on phones so the real units
+// fit at 12px. Clicking the active segment clears the field back to null.
 function SegmentedControl({
   def,
   selected,
@@ -345,36 +329,27 @@ function SegmentedControl({
   onChange: (next: string | null) => void
 }) {
   return (
-    <div className="flex border border-border">
-      {def.buckets.map((b, i) => {
+    <div className="grid grid-cols-2 gap-2">
+      {def.buckets.map((b) => {
         const active = selected === b.key
         return (
           <button
             key={b.key}
+            type="button"
             onClick={() => onChange(active ? null : b.key)}
             aria-pressed={active}
             className={cn(
-              "flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 py-2 text-center transition-colors duration-200",
-              i < def.buckets.length - 1 ? "border-r border-border" : "",
-              active ? "bg-accent" : "hover:bg-foreground/5",
+              "flex min-h-11 min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 border px-1 py-2 text-center font-mono text-xs transition-colors duration-200",
+              active
+                ? "border-accent bg-accent text-accent-foreground"
+                : "border-control text-muted-foreground hover:border-foreground hover:text-foreground",
             )}
           >
-            <span
-              className={cn(
-                "font-mono text-[11px] uppercase tracking-wider leading-tight",
-                active ? "text-accent-foreground" : "text-muted-foreground",
-              )}
-            >
+            <span className="inline-flex items-center gap-1 uppercase tracking-wider">
+              {active && <Check aria-hidden="true" className="h-3.5 w-3.5" />}
               {b.name}
-            </span>
-            <span
-              className={cn(
-                "font-mono text-[8px] tracking-normal leading-tight",
-                active ? "text-accent-foreground/80" : "text-muted-foreground/80",
-              )}
-            >
-              {b.range}
-            </span>
+            </span>{" "}
+            <span>{b.range}</span>
           </button>
         )
       })}

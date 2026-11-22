@@ -28,7 +28,8 @@ export function DataFreshness({
 }) {
   if (compact) {
     return (
-      <p
+      <aside
+        aria-label="Data dates"
         className={cn(
           "flex flex-wrap justify-center gap-x-3 border-b border-border px-2 py-1.5 font-mono text-xs text-muted-foreground",
           className,
@@ -40,13 +41,13 @@ export function DataFreshness({
         <span>
           Fundamentals <strong className="font-semibold text-foreground">{FUNDAMENTALS_AS_OF}</strong>
         </span>
-      </p>
+      </aside>
     )
   }
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground",
+        "flex flex-wrap items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground",
         align === "end" && "sm:justify-end",
         className,
       )}
@@ -55,13 +56,13 @@ export function DataFreshness({
     >
       {/* Prices Telemetry Chip */}
       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-border/60 bg-card/30">
-        <span className="text-muted-foreground/80 text-[10px]">Prices as of:</span>
+        <span className="text-muted-foreground text-xs">Prices as of:</span>
         <span className="text-foreground font-semibold tabular-nums">{PRICES_AS_OF}</span>
       </div>
 
       {/* Fundamentals Telemetry Chip */}
       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-border/60 bg-card/30">
-        <span className="text-muted-foreground/80 text-[10px]">Fundamentals:</span>
+        <span className="text-muted-foreground text-xs">Fundamentals:</span>
         <span className="text-foreground font-semibold tabular-nums">{FUNDAMENTALS_AS_OF}</span>
       </div>
     </div>

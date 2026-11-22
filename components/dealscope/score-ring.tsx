@@ -60,11 +60,15 @@ export function ScoreRing({
           />
         </svg>
       )}
+      <span className="sr-only">
+        {hasScore ? `Composite score ${score} out of 100` : "Not scored"}
+        {sectorAverage != null && `, sector average ${sectorAverage}`}
+      </span>
       {showLabel && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className="font-[family-name:var(--font-bebas)] leading-none text-foreground"
-            style={{ fontSize: size * 0.32 }}
+            className="font-display leading-none text-foreground"
+            style={{ fontSize: Math.max(12, size * (hasScore ? 0.36 : 0.28)) }}
           >
             {hasScore ? score : "N/A"}
           </span>

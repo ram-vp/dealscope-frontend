@@ -1,6 +1,9 @@
 "use client"
 
 import type React from "react"
+import { ArrowLeft } from "lucide-react"
+import { AppLink } from "@/components/dealscope/app-link"
+import { Chip } from "@/components/ui/chip"
 import { BitmapChevron } from "@/components/bitmap-chevron"
 import { ScoreRing } from "@/components/dealscope/score-ring"
 import { SectorIndustryFilter } from "@/components/dealscope/sector-industry-filter"
@@ -117,28 +120,29 @@ export function ResultsView({
           {/* Eyebrow label doubles as the back control */}
           <button
             onClick={onBack}
-            className="font-mono text-xs uppercase tracking-[0.25em] text-accent hover:text-foreground transition-colors duration-200 inline-flex items-center gap-1.5 cursor-pointer"
+            className="font-mono text-xs uppercase tracking-[0.25em] text-accent hover:text-foreground transition-colors duration-200 inline-flex items-center gap-1.5 cursor-pointer min-h-11 min-w-11"
           >
-            ← Back to Overview
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+            Back to Overview
           </button>
-          <h1 className="mt-2.5 font-[family-name:var(--font-bebas)] text-4xl sm:text-5xl lg:text-6xl tracking-tight text-balance text-foreground leading-none">
+          <h1 className="mt-2.5 font-display text-4xl sm:text-5xl lg:text-6xl tracking-tight text-balance text-foreground leading-none">
             {results.length.toLocaleString("en-IN")}{" "}
             {results.length === 1 ? "Company Matches" : "Companies Match"}
           </h1>
-          <p className="mt-1.5 font-mono text-[11px] sm:text-xs text-muted-foreground">
+          <p className="mt-1.5 font-mono text-xs text-muted-foreground">
             {screen.text ? "Ranked by name match, then composite score" : "Ranked by sector composite score"} · Missing metrics excluded from weighting · Unclassified tickers not scored
           </p>
         </div>
 
         {/* Action Row: Desktop 1-row aligned; Mobile 3 equal buttons */}
-        <div className="grid grid-cols-3 sm:flex sm:flex-row items-center gap-2 sm:gap-2.5 shrink-0">
+        <div className="grid grid-cols-2 min-[420px]:grid-cols-3 max-[419px]:[&>:last-child]:col-span-2 sm:flex sm:flex-row items-center gap-2 sm:gap-2.5 shrink-0">
           <button
             onClick={onOpenFilters}
-            className="group inline-flex items-center justify-center gap-2 border border-border/80 bg-card/50 px-3 sm:px-4 py-2.5 font-mono text-[11px] sm:text-xs uppercase tracking-wider text-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-all duration-200 cursor-pointer min-h-[42px]"
+            className="group inline-flex items-center justify-center gap-2 border border-control bg-card/50 px-3 sm:px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-colors duration-200 cursor-pointer min-h-11 min-w-11"
           >
             <span>Filters</span>
             {activeFilters > 0 ? (
-              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-accent text-accent-foreground font-mono text-[10px] leading-none font-bold">
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-accent text-accent-foreground font-mono text-xs leading-none font-bold">
                 {activeFilters}
               </span>
             ) : (
@@ -148,7 +152,7 @@ export function ResultsView({
 
           <button
             onClick={onOpenWeights}
-            className="group inline-flex items-center justify-center gap-2 border border-border/80 bg-card/50 px-3 sm:px-4 py-2.5 font-mono text-[11px] sm:text-xs uppercase tracking-wider text-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-all duration-200 cursor-pointer min-h-[42px]"
+            className="group inline-flex items-center justify-center gap-2 border border-control bg-card/50 px-3 sm:px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-colors duration-200 cursor-pointer min-h-11 min-w-11"
           >
             <span>Weights</span>
             <BitmapChevron className="transition-transform duration-[300ms] ease-in-out group-hover:rotate-45" />
@@ -158,8 +162,8 @@ export function ResultsView({
             type="button"
             onClick={handleExportCsv}
             disabled={results.length === 0}
-            aria-label="Export current screened companies as CSV"
-            className="group inline-flex items-center justify-center gap-2 border border-border/80 bg-card/50 px-3 sm:px-4 py-2.5 font-mono text-[11px] sm:text-xs uppercase tracking-wider text-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-all duration-200 disabled:pointer-events-none disabled:opacity-40 cursor-pointer min-h-[42px]"
+            title="Export current screened companies as CSV"
+            className="group inline-flex items-center justify-center gap-2 border border-control bg-card/50 px-3 sm:px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-colors duration-200 disabled:pointer-events-none disabled:opacity-40 cursor-pointer min-h-11 min-w-11"
           >
             <span>Export CSV</span>
           </button>
@@ -179,13 +183,13 @@ export function ResultsView({
           totalCount={totalCount}
           recognised={recognised}
           size="sm"
-          placeholder="Refine by name, ticker, or screen (e.g. 'roce over 20 low debt')"
+          placeholder="Name, ticker or screen"
         />
       </div>
 
       {/* Example screens, compact ribbon on this view */}
       <div className="mb-4 sm:mb-6">
-        <span className="font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-muted-foreground block mb-2">
+        <span className="hidden sm:block font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
           Preset Screens
         </span>
         <ExampleScreens screens={screens} onApply={onApplyScreen} variant="pills" />
@@ -212,21 +216,21 @@ export function ResultsView({
             No companies match all active filters
             {screen.text && ` and "${screen.text}"`}
           </p>
-          <p className="mt-3 mx-auto max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-3 mx-auto max-w-sm font-mono text-xs leading-relaxed text-muted-foreground">
             Conditions combine with AND, so each one narrows the set further. Remove a chip above to
             widen the screen, or clear all filters to start again.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={onClearAll}
-              className="inline-flex items-center gap-2 border border-accent/60 px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-accent hover:bg-accent/10 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-2 border border-accent/60 px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-accent hover:bg-accent/10 transition-colors duration-200 cursor-pointer min-h-11 min-w-11"
             >
               Clear all filters
             </button>
             {activeFilters > 0 && (
               <button
                 onClick={onOpenFilters}
-                className="inline-flex items-center gap-2 border border-foreground/20 px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-all duration-200 cursor-pointer"
+                className="inline-flex items-center gap-2 border border-control px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-colors duration-200 cursor-pointer min-h-11 min-w-11"
               >
                 Adjust filters ({activeFilters})
               </button>
@@ -252,7 +256,7 @@ export function ResultsView({
         <div className="mt-8 text-center sm:text-left">
           <button
             onClick={onShowAll}
-            className="border border-border bg-card/40 px-6 py-3 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-all duration-200 cursor-pointer"
+            className="border border-control bg-card/40 px-6 py-3 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-colors duration-200 cursor-pointer min-h-11 inline-flex items-center min-w-11"
           >
             Show all {results.length} results
           </button>
@@ -284,87 +288,69 @@ function ResultRow({
 }) {
   const score = computeScore(company.factors, weights)
 
+  // The heading holds the link and the link's ::after covers the row, so the
+  // whole row is one target without nesting headings inside a button.
   return (
-    <article className="result-row">
-      <button
-        onClick={onSelect}
-        className="group w-full text-left border-t border-border/40 last:border-b hover:bg-accent/5 transition-colors duration-200 py-4 sm:py-5 px-2 sm:px-4 flex items-start sm:items-center gap-3.5 sm:gap-6 cursor-pointer"
-      >
-        {/* Index */}
-        <span className="hidden md:block font-mono text-xs text-muted-foreground/60 w-7 shrink-0 tabular-nums">
-          {String(index + 1).padStart(2, "0")}
-        </span>
+    <article className="result-row group relative flex items-start gap-3.5 border-t border-border px-2 py-4 transition-colors duration-200 last:border-b hover:bg-accent/5 focus-within:bg-accent/5 sm:items-center sm:gap-6 sm:px-4 sm:py-5">
+      {/* Index */}
+      <span className="hidden w-7 shrink-0 font-mono text-xs tabular-nums text-muted-foreground md:block">
+        {String(index + 1).padStart(2, "0")}
+      </span>
 
-        {/* Score ring */}
-        <div className="shrink-0 pt-0.5 sm:pt-0">
-          <ScoreRing score={score} size={46} strokeWidth={2.5} className="shrink-0" />
-        </div>
+      {/* Score ring */}
+      <ScoreRing score={score} size={46} strokeWidth={2.5} className="shrink-0" />
 
-        {/* Name + sector + metadata */}
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <h3 className="font-[family-name:var(--font-bebas)] text-xl sm:text-2xl md:text-3xl tracking-tight group-hover:text-accent transition-colors duration-200 text-foreground break-words">
+      {/* Name + sector + metadata */}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <h2 className="min-w-0 break-words font-display text-xl tracking-tight text-foreground sm:text-2xl md:text-3xl">
+            <AppLink
+              href={`/?view=detail&ticker=${encodeURIComponent(company.ticker)}`}
+              onNavigate={onSelect}
+              className="inline-flex min-h-11 min-w-11 items-center transition-colors duration-200 after:absolute after:inset-0 group-hover:text-accent"
+            >
               {company.name}
-            </h3>
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground/80 shrink-0">
-              {company.ticker}
-            </span>
-            <OwnershipBadge
-              holding={company.raw.promoterHolding}
-              pledge={company.raw.promoterPledge}
-              className="self-center shrink-0"
-            />
-          </div>
-
-          <div className="mt-0.5 font-mono text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground/70 flex flex-wrap items-center gap-1.5">
-            <span>{company.sector}</span>
-            {company.industry && (
-              <>
-                <span className="text-border">·</span>
-                <span className="truncate max-w-[200px] sm:max-w-none">{company.industry}</span>
-              </>
-            )}
-          </div>
-
-          {/* Why this company passed */}
-          {reasons.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {reasons.map((r) => (
-                <span
-                  key={r.label}
-                  className={cn(
-                    "inline-flex items-center border px-1.5 py-0.5 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider",
-                    r.tone === "good"
-                      ? "border-accent/40 text-accent/90 bg-accent/5"
-                      : "border-border/60 text-muted-foreground",
-                  )}
-                >
-                  {r.label}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Mobile / tablet metrics 2x2 */}
-          <div className="mt-2.5 pt-2 border-t border-border/20 grid grid-cols-2 sm:grid-cols-4 gap-2 lg:hidden">
-            <Metric label="Revenue" value={company.metrics.revenue} />
-            <Metric label="Margin" value={company.metrics.ebitdaMargin} />
-            <Metric label="ROCE" value={company.metrics.roce} />
-            <Metric label="Debt" value={company.metrics.totalDebt} />
-          </div>
+            </AppLink>
+          </h2>
+          <span className="shrink-0 font-mono text-xs uppercase tracking-wider text-muted-foreground">{company.ticker}</span>
+          <OwnershipBadge holding={company.raw.promoterHolding} pledge={company.raw.promoterPledge} className="shrink-0" />
         </div>
 
-        {/* Desktop 4-col Metrics */}
-        <div className="hidden lg:grid grid-cols-4 gap-6 shrink-0 text-right">
-          <Metric label="Revenue" value={company.metrics.revenue} align="right" />
-          <Metric label="Margin" value={company.metrics.ebitdaMargin} align="right" />
-          <Metric label="ROCE" value={company.metrics.roce} align="right" />
-          <Metric label="Debt" value={company.metrics.totalDebt} align="right" />
-        </div>
+        <p className="mt-0.5 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+          {company.sector}
+          {company.industry && ` · ${company.industry}`}
+        </p>
 
-        {/* Chevron */}
-        <BitmapChevron className="shrink-0 text-muted-foreground group-hover:text-accent transition-all duration-300 group-hover:rotate-45 self-center" />
-      </button>
+        {/* Why this company passed */}
+        {reasons.length > 0 && (
+          <ul className="mt-1.5 flex flex-wrap gap-1">
+            {reasons.map((r) => (
+              <li key={r.label}>
+                <Chip tone={r.tone === "good" ? "accent" : "neutral"}>{r.label}</Chip>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Mobile / tablet metrics 2x2 */}
+        <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-border pt-2 sm:grid-cols-4 lg:hidden">
+          <Metric label="Revenue" value={company.metrics.revenue} />
+          <Metric label="Margin" value={company.metrics.ebitdaMargin} />
+          <Metric label="ROCE" value={company.metrics.roce} />
+          <Metric label="Debt" value={company.metrics.totalDebt} />
+        </div>
+      </div>
+
+      {/* Desktop 4-col Metrics */}
+      <div className="hidden shrink-0 grid-cols-4 gap-6 text-right lg:grid">
+        <Metric label="Revenue" value={company.metrics.revenue} align="right" />
+        <Metric label="Margin" value={company.metrics.ebitdaMargin} align="right" />
+        <Metric label="ROCE" value={company.metrics.roce} align="right" />
+        <Metric label="Debt" value={company.metrics.totalDebt} align="right" />
+      </div>
+
+      {/* Chevron */}
+      <BitmapChevron className="shrink-0 self-center text-muted-foreground transition-transform duration-300 group-hover:rotate-45 group-hover:text-accent" />
     </article>
   )
 }
@@ -372,7 +358,7 @@ function ResultRow({
 function Metric({ label, value, align = "left" }: { label: string; value: string; align?: "left" | "right" }) {
   return (
     <div className={cn("min-w-0", align === "right" ? "text-right w-20 xl:w-24" : "text-left")}>
-      <span className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{label}</span>
+      <span className="block font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <span className="block mt-0.5 font-mono text-xs text-foreground font-medium tabular-nums">{value}</span>
     </div>
   )
