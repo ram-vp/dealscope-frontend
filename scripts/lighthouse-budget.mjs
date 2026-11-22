@@ -36,10 +36,22 @@ async function audit(url) {
   }
 }
 
+/** Chrome occasionally fails to record a trace (NO_NAVSTART). That's not a result. */
+async function auditWithRetry(url) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await audit(url)
+    } catch (error) {
+      if (attempt === 3) throw error
+      console.log(`  retrying ${url}: ${error.message}`)
+    }
+  }
+}
+
 let failed = false
 for (const budget of BUDGETS) {
   const runs = []
-  for (let i = 0; i < RUNS; i++) runs.push(await audit(BASE + budget.path))
+  for (let i = 0; i < RUNS; i++) runs.push(await auditWithRetry(BASE + budget.path))
   const score = (id) => Math.round(median(runs.map((run) => run.categories[id].score)) * 100)
   const metric = (id) => median(runs.map((run) => run.audits[id].numericValue))
 

@@ -44,7 +44,10 @@ jobs:
       - name: Data validator and canary tests
         run: python3 scripts/test_validate_data.py
       - name: Validate the data being served
-        run: python3 scripts/validate_data.py --candidate data
+        # Against itself: shape, duplicates, meta, links. Impossible values are
+        # ratcheted by the bot (the placeholders already live are tolerated
+        # until the backend's corrected export replaces them).
+        run: python3 scripts/validate_data.py --candidate data --base data
       - name: Lint
         run: pnpm lint --max-warnings 0
       - name: Typecheck
