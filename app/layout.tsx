@@ -18,12 +18,15 @@ const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   variable: "--font-ibm-plex-sans",
 })
-// Mono sets nearly all small text; only the weight used above the fold is preloaded.
+// Mono sets nearly all small text. Its fallback must itself be monospace with
+// the same 0.6em advance: next/font's adjusted Arial re-wrapped the hero when
+// the font swapped in (CLS 0.17).
 const ibmPlexMono = IBM_Plex_Mono({
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600"],
   subsets: ["latin"],
   variable: "--font-ibm-plex-mono",
-  preload: false,
+  adjustFontFallback: false,
+  fallback: ["Menlo", "Courier New", "Liberation Mono", "DejaVu Sans Mono", "monospace"],
 })
 const bebasNeue = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-bebas" })
 

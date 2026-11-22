@@ -1,7 +1,7 @@
 # DealScope frontend
 
 Public site for [dealscope-screener.vercel.app](https://dealscope-screener.vercel.app).
-Data is bundled JSON produced by `RAM-cybe/dealscope`.
+Data is JSON produced by `ram-vp/dealscope`, served as prerendered static files.
 
 ```
 pnpm install
@@ -14,10 +14,10 @@ Open http://localhost:3000.
 
 | File | Loaded when |
 |---|---|
-| `data/companies.json` | First paint (screening / ranking) |
-| `data/deals.json` | First paint (comps) |
-| `data/narratives.json` | After paint, for tear-sheet copy |
-| `data/news.json` | After paint, for tear-sheet news |
+| `data/companies.json` | On intent or a deep link, as `/data/universe` |
+| `data/deals.json` | With the universe |
+| `data/narratives.json` | Per tear sheet, as `/data/company/<shard>` |
+| `data/news.json` | Per tear sheet, same shard |
 | `data/dataset-meta.json` | Header dates |
 | `data/filter-bands.json` / `data/sector-bands.json` | Filters and NL screener |
 
@@ -33,4 +33,4 @@ python3 export_for_frontend.py
 ```
 
 Then copy `data/frontend/*.json` into this repo's `data/` folder, except
-`news.json` which is produced by `scripts/export_news_and_filings.py`.
+`news.json`, which the backend's weekly News refresh workflow publishes.
