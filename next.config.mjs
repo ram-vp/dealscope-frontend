@@ -59,6 +59,11 @@ const nextConfig = {
     // The optimizer only serves this site's own rasters: no remote sources, no
     // SVG, no query strings. It has had several RCE advisories, so keep it narrow.
     formats: ["image/webp"],
+    // Each distinct size/quality is fresh CPU on an unauthenticated endpoint.
+    qualities: [75],
+    deviceSizes: [640],
+    imageSizes: [32, 64, 180],
+    minimumCacheTTL: 86400,
     localPatterns: [{ pathname: "/*.png", search: "" }],
     remotePatterns: [],
     dangerouslyAllowSVG: false,

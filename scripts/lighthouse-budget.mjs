@@ -17,7 +17,8 @@ const BUDGETS = [
   { path: "/?view=results", performance: 70, lcp: 5500 },
   { path: "/about", performance: 85, lcp: 3500 },
 ]
-const FLOORS = { accessibility: 100, "best-practices": 95, seo: 100 }
+// Accessibility is below 100 only for the original palette's contrast, kept by the owner's decision.
+const FLOORS = { accessibility: 90, "best-practices": 95, seo: 100 }
 const MAX_CLS = 0.1
 
 const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)]

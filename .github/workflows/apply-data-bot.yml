@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Checkout
         if: github.event_name != 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -82,7 +82,9 @@ jobs:
           SEEN_NEWER=false
           while read -r B; do
             [[ -n "$B" ]] || continue
-            STATE=$(gh pr list --head "$B" --state all --json state --jq '.[0].state // "NONE"')
+            # `--head` matches fork PRs by branch name too: a stranger's closed PR
+            # named like a data branch used to get the real branch deleted.
+            STATE=$(gh pr list --head "$B" --state all --json state,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)] | .[0].state // "NONE"')
             case "$STATE" in
               MERGED|CLOSED)
                 echo "Deleting finished branch $B ($STATE)"
@@ -142,7 +144,7 @@ jobs:
       BRANCH: ${{ matrix.branch }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ matrix.branch }}
           fetch-depth: 0
@@ -152,7 +154,8 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main
-          mapfile -t CHANGED < <(git diff --name-only origin/main...HEAD)
+          # --no-renames: rename detection lists only the new path, hiding a deletion.
+          mapfile -t CHANGED < <(git diff --name-only --no-renames origin/main...HEAD)
           if [[ ${#CHANGED[@]} -eq 0 ]]; then
             echo "No file differences vs origin/main — nothing to apply; removing the empty branch."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -163,6 +166,10 @@ jobs:
           printf '  %s\n' "${CHANGED[@]}"
           allowed='^data/(companies|narratives|deals|filter-bands|sector-bands|dataset-meta|news)\.json$'
           for f in "${CHANGED[@]}"; do
+            if [[ "$(git ls-tree HEAD -- "$f" | cut -d' ' -f1)" != "100644" ]]; then
+              echo "::error::Not a regular file (deleted, symlink, submodule or executable): $f"
+              exit 1
+            fi
             if [[ ! "$f" =~ $allowed ]]; then
               echo "::error::Unexpected path on data-bot branch: $f"
               echo "Only data/{companies,narratives,deals,filter-bands,sector-bands,dataset-meta,news}.json are allowed."
@@ -179,6 +186,7 @@ jobs:
           done
           python3 /tmp/trusted/validate_data.py --candidate data --base /tmp/base-data
           echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "validated=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Open pull request if missing
         id: pr
@@ -212,8 +220,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ steps.pr.outputs.number }}
+          VALIDATED: ${{ steps.verify.outputs.validated }}
         run: |
           set -euo pipefail
+          if [[ ! "${VALIDATED}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::No validated commit to merge"
+            exit 1
+          fi
           if [[ -z "${PR}" ]]; then
             echo "::error::No pull request number from the previous step"
             exit 1
@@ -233,8 +246,9 @@ jobs:
             if [[ "$MERGEABLE" == "MERGEABLE" || "$i" -ge 4 ]]; then
               git fetch origin main --quiet
               git checkout -q -B "__squash_merge_main" origin/main
-              git fetch origin "$HEAD" --quiet
-              git merge --squash "origin/$HEAD"
+              # The commit that passed validation, never the branch's current tip:
+              # anything pushed since has been checked by nobody.
+              git merge --squash "$VALIDATED"
               if git diff --cached --quiet; then
                 echo "Nothing to squash for PR #$PR"
                 echo "sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"

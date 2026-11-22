@@ -73,11 +73,11 @@ export function ScreenBar({
     <div className="w-full">
       <div
         className={cn(
-          "flex items-stretch border bg-card/60 transition-colors duration-200",
+          "flex items-stretch border bg-card/60 backdrop-blur-sm transition-all duration-200 shadow-xs",
           trailing ? "flex-col sm:flex-row" : "flex-row",
           recognised
-            ? "border-accent/80 ring-1 ring-accent/40"
-            : "border-control focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/40",
+            ? "border-accent/80 ring-1 ring-accent/40 shadow-accent/5"
+            : "border-border/80 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/40",
         )}
       >
         <div
@@ -89,7 +89,7 @@ export function ScreenBar({
         >
           <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none select-none">
             {recognised ? (
-              <span className="font-mono text-xs uppercase tracking-wider font-bold text-accent bg-accent/15 px-1.5 py-0.5 border border-accent/40">
+              <span className="font-mono text-[10px] uppercase tracking-wider font-bold text-accent bg-accent/15 px-1.5 py-0.5 border border-accent/40">
                 SCREEN
               </span>
             ) : (
@@ -100,34 +100,31 @@ export function ScreenBar({
           <input
             ref={inputRef}
             data-screen-input
+            name="screen"
+            maxLength={200}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            enterKeyHint="search"
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             aria-label="Search company or ticker"
-            enterKeyHint="search"
-            name="screen"
-            autoComplete="off"
-            autoCapitalize="off"
-            spellCheck={false}
             autoFocus={autoFocus}
-            className={cn(
-              "box-border w-full h-full bg-transparent pr-12 font-mono text-base text-foreground placeholder:text-muted-foreground",
-              // Room for the SCREEN tag, which is wider than the icon.
-              recognised ? "pl-24" : "pl-11 sm:pl-12",
-            )}
+            className="box-border w-full h-full bg-transparent pl-11 sm:pl-12 pr-9 sm:pr-10 font-mono text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
           />
 
           {query ? (
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
               <button
                 type="button"
                 onClick={() => onQueryChange("")}
                 aria-label="Clear search input"
-                className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-11"
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
-                <X aria-hidden="true" className="w-4 h-4" />
+                <X aria-hidden="true" className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : null}
@@ -170,7 +167,7 @@ export function ScreenBar({
           )}
 
           {recognised && (
-            <span className="font-mono text-xs uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 border border-accent/30 font-semibold">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 border border-accent/30 font-semibold">
               Screen Applied
             </span>
           )}
@@ -178,7 +175,7 @@ export function ScreenBar({
           {activeCount > 0 && (
             <button
               onClick={onClearAll}
-              className="font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors duration-200 cursor-pointer min-h-11 inline-flex items-center min-w-11"
+              className="font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors duration-200 cursor-pointer"
             >
               Clear all
             </button>
@@ -192,18 +189,20 @@ export function ScreenBar({
             <button
               key={chip.id}
               onClick={() => onRemoveChip(chip)}
-              className="group inline-flex max-w-full items-center gap-2 border border-accent/60 bg-accent/10 px-3 py-1 font-mono text-xs text-accent hover:bg-accent/20 hover:border-accent transition-colors duration-200 cursor-pointer min-h-11 min-w-11"
+              className="group inline-flex max-w-full items-center gap-2 border border-accent/60 bg-accent/10 px-3 py-1 font-mono text-xs text-accent hover:bg-accent/20 hover:border-accent transition-colors duration-200 cursor-pointer"
               aria-label={`Remove filter: ${chip.label}`}
             >
               <span className="truncate">{chip.label}</span>
-              <X aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              <span aria-hidden="true" className="text-accent font-bold">
+                ×
+              </span>
             </button>
           ))}
         </div>
       )}
 
       {matchCount === 0 && activeCount > 0 && (
-        <p className="mt-3 font-mono text-xs leading-relaxed text-muted-foreground">
+        <p className="mt-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
           Nothing matches every condition. Drop a chip above to widen the screen.
         </p>
       )}

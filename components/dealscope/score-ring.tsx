@@ -1,3 +1,5 @@
+import type React from "react"
+
 interface ScoreRingProps {
   score: number | null
   size?: number
@@ -34,7 +36,7 @@ export function ScoreRing({
           cy={center}
           r={radius}
           fill="none"
-          stroke="var(--track)"
+          stroke="oklch(0.25 0 0)"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -42,10 +44,12 @@ export function ScoreRing({
           cy={center}
           r={radius}
           fill="none"
-          stroke="var(--accent)"
+          stroke="oklch(0.7 0.2 45)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={circumference - ((hasScore ? score : 0) / 100) * circumference}
+          className="ring-draw"
+          style={{ "--circumference": circumference } as React.CSSProperties}
         />
       </svg>
       {sectorAverage != null && (
@@ -55,7 +59,7 @@ export function ScoreRing({
             y1={center + tickInner * Math.sin(avgRad)}
             x2={center + tickOuter * Math.cos(avgRad)}
             y2={center + tickOuter * Math.sin(avgRad)}
-            stroke="var(--muted-foreground)"
+            stroke="oklch(0.55 0 0)"
             strokeWidth={1.5}
           />
         </svg>
@@ -67,8 +71,9 @@ export function ScoreRing({
       {showLabel && (
         <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className="font-display leading-none text-foreground"
-            style={{ fontSize: Math.max(12, size * (hasScore ? 0.36 : 0.28)) }}
+            key={score}
+            className="enter-fade font-[family-name:var(--font-bebas)] leading-none text-foreground"
+            style={{ fontSize: size * 0.32 }}
           >
             {hasScore ? score : "N/A"}
           </span>

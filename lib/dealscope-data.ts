@@ -27,6 +27,11 @@ export const DEFAULT_WEIGHTS: Weights = {
   debtLevel: 25,
 }
 
+/** Weights can arrive in someone else's link, so non-default ones must be labelled. */
+export function hasCustomWeights(weights: Weights): boolean {
+  return FACTOR_KEYS.some((k) => weights[k] !== DEFAULT_WEIGHTS[k])
+}
+
 // ---------------------------------------------------------------------------
 // Range filters -- separate from weights. Weights control ranking; these
 // control which companies show up at all. Filtering is done on the same four

@@ -1,9 +1,6 @@
 "use client"
 
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { ChevronRight } from "lucide-react"
-import { MobileDisclosure } from "@/components/ui/disclosure"
-import { Toggle } from "@/components/ui/toggle"
 import { type Sector, type IndustryGroup, filterIndustryGroups } from "@/lib/dealscope-data"
 import { cn } from "@/lib/utils"
 
@@ -88,50 +85,59 @@ export function SectorIndustryFilter({
   return (
     <div ref={containerRef}>
       {/* Sector pills */}
-      <MobileDisclosure
-        label={selectedSectors.length ? `Sectors (${selectedSectors.length} selected)` : "Sectors"}
-        defaultOpen={selectedSectors.length > 0}
-      >
-        {sectors.map((sector) => (
-          <Toggle
-            key={sector.name}
-            pressed={selectedSectors.includes(sector.name)}
-            onClick={() => onToggleSector(sector.name)}
-          >
-            <span>{sector.name}</span>
-            <span className="tabular-nums">{sector.count}</span>
-          </Toggle>
-        ))}
-      </MobileDisclosure>
+      <div className="flex flex-nowrap sm:flex-wrap items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+        {sectors.map((sector) => {
+          const active = selectedSectors.includes(sector.name)
+          return (
+            <button
+              key={sector.name}
+              onClick={() => onToggleSector(sector.name)}
+              aria-pressed={active}
+              className={cn(
+                "inline-flex items-baseline gap-1.5 sm:gap-2 border px-2.5 sm:px-3 py-1 sm:py-1.5 font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-150 shrink-0 cursor-pointer",
+                active
+                  ? "border-accent bg-accent/15 text-accent font-semibold shadow-xs"
+                  : "border-border/60 bg-card/30 text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+              )}
+            >
+              <span>{sector.name}</span>
+              <span className={cn("text-[9px] sm:text-[11px] tabular-nums", active ? "text-accent font-bold" : "text-muted-foreground")}>
+                {sector.count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
       {/* Toggle + active-industry summary */}
       <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-3">
         <button
           ref={toggleRef}
-          type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls={open ? panelId : undefined}
           className={cn(
-            "inline-flex items-center gap-2 border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-200 cursor-pointer min-h-11 min-w-11",
+            "inline-flex items-center gap-2 border px-3 py-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer",
             open || selectedCount > 0
               ? "border-accent bg-accent/10 text-accent font-semibold"
-              : "border-control bg-card/30 text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+              : "border-border/60 bg-card/30 text-muted-foreground hover:border-foreground/40 hover:text-foreground",
           )}
         >
           <span>Browse Industries</span>
           {selectedCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-accent text-accent-foreground text-xs font-bold leading-none">
+            <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-accent text-accent-foreground text-[10px] font-bold leading-none">
               {selectedCount}
             </span>
           )}
-          <ChevronRight aria-hidden="true" className={cn("h-4 w-4 transition-transform duration-200", open && "rotate-90")} />
+          <span aria-hidden="true" className={cn("transition-transform duration-200", open && "rotate-90")}>
+            ›
+          </span>
         </button>
 
         {selectedCount > 0 && (
           <button
             onClick={onClearIndustries}
-            className="font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors duration-200 min-h-11 inline-flex items-center min-w-11"
+            className="font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors duration-200"
           >
             Clear industries
           </button>
@@ -149,10 +155,11 @@ export function SectorIndustryFilter({
               placeholder={`Search ${totalIndustries} industries…`}
               aria-label="Search industries"
               name="industry-search"
+              maxLength={100}
               autoComplete="off"
               spellCheck={false}
               autoFocus
-              className="w-full bg-transparent px-4 py-3 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-accent"
+              className="w-full bg-transparent px-4 py-3 font-mono text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
             />
           </div>
 
@@ -175,7 +182,7 @@ export function SectorIndustryFilter({
                 {otherSectors.length > 0 && !showOtherSectors && (
                   <button
                     onClick={() => setShowOtherSectors(true)}
-                    className="self-start border border-dashed border-control px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors duration-200 min-h-11 inline-flex items-center min-w-11"
+                    className="self-start border border-dashed border-border/60 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-all duration-200"
                   >
                     Browse other sectors ({otherSectors.length})
                   </button>
@@ -221,21 +228,36 @@ function IndustryGroupBlock({
 }) {
   return (
     <div role="group" aria-label={group.sector}>
-      <p
+      <span
         className={cn(
           "font-mono text-xs uppercase tracking-[0.2em]",
           dimmedHeader ? "text-muted-foreground" : "text-accent",
         )}
       >
         {group.sector}
-      </p>
+      </span>
       <div className="mt-3 flex flex-wrap gap-2">
-        {group.industries.map((ind) => (
-          <Toggle key={ind.name} pressed={selected.includes(ind.name)} onClick={() => onToggle(ind.name)} className="normal-case">
-            {ind.name}
-            <span>{ind.count}</span>
-          </Toggle>
-        ))}
+        {group.industries.map((ind) => {
+          const active = selected.includes(ind.name)
+          return (
+            <button
+              key={ind.name}
+              onClick={() => onToggle(ind.name)}
+              aria-pressed={active}
+              className={cn(
+                "inline-flex items-baseline gap-2 border px-3 py-1.5 font-mono text-[11px] transition-all duration-200",
+                active
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border/60 text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+              )}
+            >
+              {ind.name}
+              <span className={cn("text-xs", active ? "text-accent/80" : "text-muted-foreground/80")}>
+                {ind.count}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

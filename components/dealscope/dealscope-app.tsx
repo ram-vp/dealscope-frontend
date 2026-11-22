@@ -7,7 +7,9 @@ import { ResultsView } from "@/components/dealscope/results-view"
 import { TearSheetView } from "@/components/dealscope/tear-sheet-view"
 import { WeightsPanel } from "@/components/dealscope/weights-panel"
 import { FiltersPanel } from "@/components/dealscope/filters-panel"
-import { LoadError, ViewSkeleton } from "@/components/dealscope/view-status"
+import { LoadError } from "@/components/dealscope/load-error"
+import { LoadingScreen } from "@/components/dealscope/loading-screen"
+import { scrollToY } from "@/components/smooth-scroll"
 import {
   type Company,
   type Weights,
@@ -83,13 +85,20 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
   const syncFromUrl = useCallback(() => {
     appliedSearch.current = window.location.search
     const decoded = decodeUrlState(new URLSearchParams(window.location.search))
+    // Only real sector and industry names: a link's own words would otherwise
+    // be rendered as a filter chip ("SEBI APPROVED").
+    const knownSectors = new Set(summary.sectors.map((s) => s.name))
+    const knownIndustries = new Set(summary.industryGroups.flatMap((g) => g.industries.map((i) => i.name)))
+    decoded.screen.sectors = decoded.screen.sectors.filter((s) => knownSectors.has(s))
+    decoded.screen.industries = decoded.screen.industries.filter((i) => knownIndustries.has(i))
+    decoded.screen.buckets.industry = decoded.screen.buckets.industry.filter((i) => knownIndustries.has(i))
     setView(decoded.view)
     setTickerParam(decoded.ticker)
     setCommittedScreen(decoded.screen)
     setRawText(decoded.screen.text)
     setDebouncedText(decoded.screen.text)
     if (decoded.weights) setWeights(decoded.weights)
-  }, [])
+  }, [summary.sectors, summary.industryGroups])
 
   const syncFromRouter = useCallback(() => {
     if (window.location.pathname === "/" && window.location.search !== appliedSearch.current) syncFromUrl()
@@ -193,7 +202,7 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
   useLayoutEffect(() => {
     if (!restoreScroll.current || (shownView === "results" && !ready)) return
     restoreScroll.current = false
-    window.scrollTo({ top: shownView === "results" ? resultsScroll.current : 0, behavior: "instant" })
+    scrollToY(shownView === "results" ? resultsScroll.current : 0)
   }, [shownView, shownTicker, ready])
 
   useEffect(() => {
@@ -227,7 +236,7 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
       restoreScroll.current = returning
 
       writeUrl("push", encodeUrlState({ view: nextView, ticker: nextTicker, screen: params.screen ?? screen, weights }))
-      if (!returning) requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }))
+      if (!returning) requestAnimationFrame(() => scrollToY(0))
     },
     [shownView, shownTicker, screen, weights, writeUrl],
   )
@@ -348,64 +357,57 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
       </Suspense>
 
       <div className="relative z-10">
-        {shownView === "landing" && runQueued && universe.status === "loading" && <ViewSkeleton />}
-        {shownView === "landing" && !(runQueued && universe.status === "loading") && (
-          <>
-            <div className="deeplink-placeholder">
-              <ViewSkeleton />
-            </div>
-            <div className="landing-root">
-              {universe.status === "error" && (
-                <LoadError
-                  message="Company data could not be loaded, so match counts are unavailable."
-                  onRetry={loadUniverse}
-                  className="m-4"
-                />
-              )}
-              <LandingView
-                query={queryText}
-                onQueryChange={handleQueryChange}
-                onWarmUp={loadUniverse}
-                selectedSectors={screen.sectors}
-                onToggleSector={toggleSector}
-                onRun={handleRun}
-                onOpenFilters={() => setFiltersOpen(true)}
-                activeFilterCount={activeFilterCount}
-                matchingCount={matchCount}
-                totalCount={summary.totalCount}
-                screen={screen}
-                onRemoveChip={handleRemoveChip}
-                onClearAll={handleClearAll}
-                recognised={recognised}
-                screens={summary.screens}
-                onApplyScreen={handleApplyScreen}
-                sectors={summary.sectors}
-                dealCount={summary.dealCount}
-                industryGroups={summary.industryGroups}
-                unclassifiedCount={summary.unclassifiedCount}
-                filters={pickerFilters}
-                onFiltersChange={handleBucketsChange}
+        {shownView === "landing" && (
+          <div className="landing-root relative">
+            {universe.status === "error" && (
+              <LoadError
+                message="Company data could not be loaded, so match counts are unavailable."
+                onRetry={loadUniverse}
+                className="m-4"
               />
-            </div>
-          </>
+            )}
+            <LandingView
+              query={queryText}
+              onQueryChange={handleQueryChange}
+              onWarmUp={loadUniverse}
+              selectedSectors={screen.sectors}
+              onToggleSector={toggleSector}
+              onRun={handleRun}
+              onOpenFilters={() => setFiltersOpen(true)}
+              activeFilterCount={activeFilterCount}
+              matchingCount={matchCount}
+              totalCount={summary.totalCount}
+              screen={screen}
+              onRemoveChip={handleRemoveChip}
+              onClearAll={handleClearAll}
+              recognised={recognised}
+              screens={summary.screens}
+              onApplyScreen={handleApplyScreen}
+              sectors={summary.sectors}
+              dealCount={summary.dealCount}
+              industryGroups={summary.industryGroups}
+              unclassifiedCount={summary.unclassifiedCount}
+              filters={pickerFilters}
+              onFiltersChange={handleBucketsChange}
+            />
+          </div>
         )}
 
-        {shownView !== "landing" &&
-          !ready &&
-          (universe.status === "error" ? (
-            <section className="mx-auto min-h-screen w-full max-w-3xl px-4 py-16 sm:px-6">
-              <h1 className="mb-6 font-display text-5xl uppercase">Data unavailable</h1>
-              <LoadError
-                message="Company data could not be loaded. Check your connection, then retry."
-                onRetry={loadUniverse}
-              />
-            </section>
-          ) : (
-            <ViewSkeleton />
-          ))}
+        {shownView !== "landing" && !ready && universe.status === "error" && (
+          <section className="mx-auto min-h-screen w-full max-w-7xl px-4 py-10 sm:px-6 md:px-12 md:py-16">
+            <h1 className="mb-6 font-[family-name:var(--font-bebas)] text-4xl sm:text-5xl tracking-tight text-foreground leading-none">
+              Data unavailable
+            </h1>
+            <LoadError
+              message="Company data could not be loaded. Check your connection, then retry."
+              onRetry={loadUniverse}
+            />
+          </section>
+        )}
+        {shownView !== "landing" && !ready && universe.status !== "error" && <div className="min-h-screen" />}
 
         {shownView === "results" && ready && (
-          <div key="results" className="view-enter">
+          <div key="results" className="view-enter relative">
             <ResultsView
               results={results}
               query={queryText}
@@ -438,7 +440,7 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
         )}
 
         {shownView === "detail" && ready && selectedCompany && (
-          <div key={`detail-${selectedCompany.ticker}`} className="view-enter">
+          <div key={`detail-${selectedCompany.ticker}`} className="view-enter relative">
             <TearSheetView
               company={selectedCompany}
               weights={weights}
@@ -450,6 +452,11 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
           </div>
         )}
       </div>
+
+      <LoadingScreen />
+      {((shownView !== "landing" && !ready) || (runQueued && !ready)) && universe.status !== "error" && (
+        <LoadingScreen held />
+      )}
 
       <WeightsPanel
         open={weightsOpen}
