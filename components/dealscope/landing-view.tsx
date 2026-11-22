@@ -1,10 +1,7 @@
 "use client"
 
-import type React from "react"
 import Link from "next/link"
-import { motion } from "framer-motion"
 import { SlidersHorizontal } from "lucide-react"
-import { AnimatedNoise } from "@/components/animated-noise"
 import { BitmapChevron } from "@/components/bitmap-chevron"
 import { SectorIndustryFilter } from "@/components/dealscope/sector-industry-filter"
 import type { Sector, IndustryGroup, BucketFilters } from "@/lib/dealscope-data"
@@ -17,12 +14,14 @@ import { cn } from "@/lib/utils"
 interface LandingViewProps {
   query: string
   onQueryChange: (q: string) => void
+  /** Intent signal: start downloading the universe before it's asked for. */
+  onWarmUp: () => void
   selectedSectors: string[]
   onToggleSector: (sector: string) => void
   onRun: () => void
   onOpenFilters: () => void
   activeFilterCount: number
-  matchingCount: number
+  matchingCount: number | null
   totalCount: number
   screen: ScreenFilters
   onRemoveChip: (chip: FilterChip) => void
@@ -41,6 +40,7 @@ interface LandingViewProps {
 export function LandingView({
   query,
   onQueryChange,
+  onWarmUp,
   selectedSectors,
   onToggleSector,
   onRun,
@@ -78,24 +78,19 @@ export function LandingView({
     matchingCount !== totalCount
 
   return (
-    <>
+    <div onPointerDown={onWarmUp} onFocus={onWarmUp}>
       {/* ---------------------------------------------------------------- */}
       {/* HERO SECTION: Phone-First Responsive Command Module              */}
       {/* ---------------------------------------------------------------- */}
       <section className="relative flex flex-col justify-center items-center px-4 sm:px-6 md:px-12 py-12 sm:py-16 border-b border-border/40 bg-background">
-        <AnimatedNoise opacity={0.02} />
-
         <div className="w-full max-w-5xl mx-auto flex flex-col items-center text-center">
           {/* Category Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
+          <div
             className="inline-flex items-center gap-1.5 border border-accent/30 bg-accent/5 px-2.5 py-1 mb-3 font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.14em] sm:tracking-[0.2em] text-accent max-w-full"
           >
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent animate-pulse shadow-[0_0_6px_var(--accent)]" />
             <span className="truncate">FREE LISTED-INDIA COMPS &amp; M&amp;A SCREENER</span>
-          </motion.div>
+          </div>
 
           {/* Wordmark */}
           <h1 className="font-[family-name:var(--font-bebas)] text-5xl sm:text-7xl md:text-8xl tracking-tight text-foreground select-none leading-none">
@@ -108,10 +103,7 @@ export function LandingView({
           </p>
 
           {/* Search Module (Constrained to max-w-xl to eliminate dead space) */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.05 }}
+          <div
             className="mt-6 w-full max-w-xl text-left"
           >
             <ScreenBar
@@ -137,7 +129,7 @@ export function LandingView({
                 </button>
               }
             />
-          </motion.div>
+          </div>
 
           {/* Action Row: Primary Filter Button + Secondary Universe Trigger */}
           <div className="mt-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 w-full max-w-xl">
@@ -159,7 +151,7 @@ export function LandingView({
                 onClick={onRun}
                 className="group inline-flex items-center justify-center gap-1.5 py-2 font-mono text-xs text-foreground hover:text-accent transition-colors duration-150 cursor-pointer"
               >
-                <span className="text-accent font-semibold">{matchingCount.toLocaleString("en-IN")}</span>
+                <span className="text-accent font-semibold">{matchingCount?.toLocaleString("en-IN") ?? "View"}</span>
                 <span className="text-muted-foreground">matching targets</span>
                 <span className="text-foreground group-hover:translate-x-0.5 transition-transform">→</span>
               </button>
@@ -255,21 +247,15 @@ export function LandingView({
             </p>
           </div>
           <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-5 font-sans text-sm sm:text-base md:text-lg leading-relaxed text-foreground/90">
-            <RevealItem>
-              <p>
+            <p>
                 DealScope is a free screener for NSE-listed Indian companies. You search a name or a thesis. You get a sector score, listed-peer multiples, and the deals in that sector. No login.
               </p>
-            </RevealItem>
-            <RevealItem delay={0.04}>
-              <p className="text-muted-foreground">
+            <p className="text-muted-foreground">
                 A 15% margin is ordinary in software and excellent in a factory. A single India-wide cutoff cannot tell those apart.
               </p>
-            </RevealItem>
-            <RevealItem delay={0.08}>
-              <p className="text-muted-foreground">
+            <p className="text-muted-foreground">
                 DealScope ranks each company inside its sector. 85 means 85th percentile among peers.
               </p>
-            </RevealItem>
           </div>
         </div>
       </section>
@@ -389,11 +375,9 @@ export function LandingView({
             </p>
           </div>
           <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-5 font-sans text-sm sm:text-base md:text-lg leading-relaxed text-foreground/90">
-            <RevealItem>
-              <p>
+            <p>
                 Trading multiples are what the market pays today. The deal table is what buyers paid. Two tables. No blended fantasy multiple.
               </p>
-            </RevealItem>
             <div className="mt-2 sm:mt-4 flex flex-wrap items-center gap-3 sm:gap-4 font-mono text-xs text-muted-foreground border border-border/60 bg-card/30 p-3 sm:p-4">
               <div>
                 <span className="text-foreground font-semibold">{operatingSectorCount}</span> sectors
@@ -424,7 +408,7 @@ export function LandingView({
           </div>
         </div>
       </footer>
-    </>
+    </div>
   )
 }
 
@@ -433,18 +417,5 @@ function SectionLabel({ index, label }: { index: string; label: string }) {
     <span className="font-mono text-xs uppercase tracking-[0.25em] text-accent font-semibold">
       {index} / {label}
     </span>
-  )
-}
-
-function RevealItem({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ delay: Math.min(delay, 0.1), duration: 0.2, ease: "easeOut" }}
-    >
-      {children}
-    </motion.div>
   )
 }

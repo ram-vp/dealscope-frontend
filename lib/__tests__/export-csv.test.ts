@@ -4,9 +4,10 @@
  */
 
 import { test } from "vitest"
-import { computeScore, DEFAULT_WEIGHTS, getCompanies, getDeals, type Company, type Weights } from "../dealscope-data"
+import { computeScore, DEFAULT_WEIGHTS, type Company, type Weights } from "../dealscope-data"
 import { COMPS_CSV_HEADERS, buildCompsCsv, compsCsvFilename } from "../export-comps-csv"
 import datasetMeta from "@/data/dataset-meta.json"
+import { getCompanies, getDeals } from "../universe"
 import { check } from "./check"
 
 function emptyRaw(): Company["raw"] {

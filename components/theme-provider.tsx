@@ -1,8 +1,36 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from "react"
+import type React from "react"
+import { createContext, useContext, useSyncExternalStore } from "react"
 
 type Theme = "dark" | "light"
+
+// The <html> class is the source of truth: lib/boot-script.ts sets it before
+// first paint, and this provider only reads and toggles it.
+const listeners = new Set<() => void>()
+
+function subscribe(notify: () => void) {
+  listeners.add(notify)
+  return () => {
+    listeners.delete(notify)
+  }
+}
+
+function readTheme(): Theme {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light"
+}
+
+function setTheme(theme: Theme) {
+  const root = document.documentElement
+  root.classList.toggle("dark", theme === "dark")
+  root.classList.toggle("light", theme === "light")
+  try {
+    localStorage.setItem("dealscope-theme", theme)
+  } catch {
+    // Storage blocked: the choice still applies to this page view.
+  }
+  for (const notify of listeners) notify()
+}
 
 interface ThemeContextType {
   theme: Theme
@@ -16,55 +44,11 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 })
 
-function applyThemeToDom(t: Theme) {
-  if (typeof document === "undefined") return
-  const root = document.documentElement
-  if (t === "dark") {
-    root.classList.add("dark")
-    root.classList.remove("light")
-  } else {
-    root.classList.add("light")
-    root.classList.remove("dark")
-  }
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark")
+  const theme = useSyncExternalStore<Theme>(subscribe, readTheme, () => "dark")
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
-  useEffect(() => {
-    try {
-      const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
-      const qTheme = urlParams?.get("theme") as Theme | null
-      const saved = (qTheme || localStorage.getItem("dealscope-theme")) as Theme | null
-      if (saved === "light" || saved === "dark") {
-        setThemeState(saved)
-        applyThemeToDom(saved)
-      } else {
-        // Default to dark
-        applyThemeToDom("dark")
-      }
-    } catch {
-      applyThemeToDom("dark")
-    }
-  }, [])
-
-  const setTheme = (t: Theme) => {
-    setThemeState(t)
-    applyThemeToDom(t)
-    try {
-      localStorage.setItem("dealscope-theme", t)
-    } catch {}
-  }
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
-
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
+  return <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {

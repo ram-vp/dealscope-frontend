@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { useState } from "react"
 import { BitmapChevron } from "@/components/bitmap-chevron"
 import { ScoreRing } from "@/components/dealscope/score-ring"
 import { SectorIndustryFilter } from "@/components/dealscope/sector-industry-filter"
@@ -43,7 +42,7 @@ interface ResultsViewProps {
   industryGroups: IndustryGroup[]
   unclassifiedCount: number
   screen: ScreenFilters
-  matchCount: number
+  matchCount: number | null
   totalCount: number
   onRemoveChip: (chip: FilterChip) => void
   onClearAll: () => void
@@ -85,7 +84,9 @@ export function ResultsView({
   onBack,
   sectors,
 }: ResultsViewProps) {
-  const [showAll, setShowAll] = useState(false)
+  // Keyed to the list it was pressed for, so a new result set starts capped again.
+  const [expandedList, setExpandedList] = useState<Company[] | null>(null)
+  const showAll = expandedList === results
   const visibleResults = showAll ? results : results.slice(0, RENDER_CAP)
   const activeFilters = countActiveBucketFilters(filters)
 
@@ -95,10 +96,6 @@ export function ResultsView({
       : [...filters.industry, name]
     onFiltersChange({ ...filters, industry: next })
   }
-
-  useEffect(() => {
-    setShowAll(false)
-  }, [results])
 
   const handleExportCsv = () => {
     if (results.length === 0) return
@@ -253,7 +250,7 @@ export function ResultsView({
       {!showAll && results.length > RENDER_CAP && (
         <div className="mt-8 text-center sm:text-left">
           <button
-            onClick={() => setShowAll(true)}
+            onClick={() => setExpandedList(results)}
             className="border border-border bg-card/40 px-6 py-3 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-all duration-200 cursor-pointer"
           >
             Show all {results.length} results
@@ -287,11 +284,7 @@ function ResultRow({
   const score = computeScore(company.factors, weights)
 
   return (
-    <motion.article
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: Math.min(index, 6) * 0.015, duration: 0.15, ease: "easeOut" }}
-    >
+    <article className="result-row">
       <button
         onClick={onSelect}
         className="group w-full text-left border-t border-border/40 last:border-b hover:bg-accent/5 transition-colors duration-200 py-4 sm:py-5 px-2 sm:px-4 flex items-start sm:items-center gap-3.5 sm:gap-6 cursor-pointer"
@@ -371,7 +364,7 @@ function ResultRow({
         {/* Chevron */}
         <BitmapChevron className="shrink-0 text-muted-foreground group-hover:text-accent transition-all duration-300 group-hover:rotate-45 self-center" />
       </button>
-    </motion.article>
+    </article>
   )
 }
 

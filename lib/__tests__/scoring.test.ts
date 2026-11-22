@@ -8,11 +8,11 @@ import {
   computeScore,
   DEFAULT_WEIGHTS,
   formatImpliedEquityRange,
-  getCompanies,
   MIN_POPULATED_FACTORS,
   type FactorScores,
   type Weights,
 } from "../dealscope-data"
+import { getCompanies } from "../universe"
 import { check } from "./check"
 
 const equal: Weights = { revenueGrowth: 25, ebitdaMargin: 25, roce: 25, debtLevel: 25 }

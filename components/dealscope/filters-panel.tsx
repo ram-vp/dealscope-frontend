@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Dialog } from "@/components/ui/dialog"
 import {
   type BucketFilters,
   type BucketFieldDef,
@@ -21,7 +22,7 @@ interface FiltersPanelProps {
   onFiltersChange: (filters: BucketFilters) => void
   onClose: () => void
   onApply?: () => void
-  matchCount?: number
+  matchCount?: number | null
   industryGroups: IndustryGroup[]
 }
 
@@ -45,151 +46,68 @@ export function FiltersPanel({
   matchCount,
   industryGroups,
 }: FiltersPanelProps) {
-  // Lock body scrolling when drawer is open to prevent double scrollbar behavior
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden"
-    } else {
-      document.body.style.overflow = ""
-    }
-    return () => {
-      document.body.style.overflow = ""
-    }
-  }, [open])
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    if (open) window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [open, onClose])
-
   const activeCount = countActiveBucketFilters(filters)
 
   return (
-    <AnimatePresence>
-      {open && (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      eyebrow="Screening Controls"
+      title="Quantitative Filters"
+      closeLabel="Close filters panel"
+      footer={
         <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm"
-            onClick={onClose}
-            aria-hidden="true"
-          />
-
-          {/* Panel */}
-          <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            data-lenis-prevent
-            className="fixed right-0 top-0 z-[70] h-full w-full max-w-lg bg-background border-l border-border flex flex-col shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Screening filters"
-          >
-            {/* 1. Sticky Header */}
-            <div className="p-6 sm:p-8 border-b border-border/80 bg-background flex items-start justify-between shrink-0">
-              <div>
-                <span className="font-mono text-xs uppercase tracking-[0.3em] text-accent">
-                  Screening Controls
-                </span>
-                <h2 className="mt-2 font-[family-name:var(--font-bebas)] text-3xl sm:text-4xl tracking-tight text-foreground">
-                  QUANTITATIVE FILTERS
-                </h2>
-              </div>
-              <button
-                onClick={onClose}
-                aria-label="Close filters panel"
-                className="border border-border/80 px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:border-accent hover:text-accent transition-all duration-200 cursor-pointer"
-              >
-                ESC ✕
-              </button>
-            </div>
-
-            {/* 2. Isolated Smooth Scrollable Body */}
-            <div
-              className="flex-1 overflow-y-auto p-6 sm:p-8 overscroll-contain space-y-10"
-              data-lenis-prevent
-            >
-              <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                Filter the screened universe by financial metrics: size, valuation, quality, growth, and leverage.
-                Pills accept several bands at once; segmented controls pick one. Fields left untouched do not filter.
-              </p>
-
-              {/* Grouped bucket controls */}
-              <div className="flex flex-col gap-10">
-                {GROUPS.map((group) => (
-                  <div key={group.index}>
-                    <SectionLabel index={group.index} label={group.label} />
-                    <div className="mt-5 flex flex-col gap-7">
-                      {group.fields.map((key) => (
-                        <FieldControl
-                          key={key}
-                          def={FIELD[key]}
-                          selection={filters[key]}
-                          onChange={(next) => onFiltersChange({ ...filters, [key]: next } as BucketFilters)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Industry */}
-                <div>
-                  <SectionLabel index="04" label="Industry Groups" />
-                  <div className="mt-5">
-                    <IndustryFilterControl
-                      industryGroups={industryGroups}
-                      selected={filters.industry}
-                      onChange={(next) => onFiltersChange({ ...filters, industry: next })}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Sticky Bottom Action Footer (Always Visible!) */}
-            <div className="p-4 sm:p-6 border-t border-border/80 bg-card/95 backdrop-blur-md flex items-center justify-between gap-4 shrink-0 shadow-lg">
-              <div className="flex flex-col">
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Active Filters
-                </span>
-                <span className="font-mono text-sm font-bold text-accent">
-                  {activeCount} Selected
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => onFiltersChange({ ...DEFAULT_BUCKET_FILTERS })}
-                  className="px-4 py-3 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onApply) onApply()
-                    else onClose()
-                  }}
-                  className="border border-accent bg-accent text-accent-foreground px-6 py-3 font-mono text-xs uppercase tracking-widest font-bold hover:bg-accent/90 transition-all cursor-pointer shadow-sm"
-                >
-                  {matchCount != null ? `View ${matchCount.toLocaleString("en-IN")} Matches ➔` : "Apply Filters"}
-                </button>
-              </div>
-            </div>
-          </motion.aside>
+          <p className="flex flex-col font-mono" aria-live="polite">
+            <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Active Filters</span>
+            <span className="text-sm font-bold text-accent">{activeCount} Selected</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => onFiltersChange({ ...DEFAULT_BUCKET_FILTERS })}>
+              Reset
+            </Button>
+            <Button variant="primary" onClick={onApply ?? onClose}>
+              {matchCount != null ? `View ${matchCount.toLocaleString("en-IN")} Matches` : "Apply Filters"}
+            </Button>
+          </div>
         </>
-      )}
-    </AnimatePresence>
+      }
+    >
+      <p className="font-mono text-xs leading-relaxed text-muted-foreground">
+        Filter the screened universe by financial metrics: size, valuation, quality, growth, and leverage. Pills accept
+        several bands at once; segmented controls pick one. Fields left untouched do not filter.
+      </p>
+
+      {/* Grouped bucket controls */}
+      <div className="mt-10 flex flex-col gap-10">
+        {GROUPS.map((group) => (
+          <div key={group.index}>
+            <SectionLabel index={group.index} label={group.label} />
+            <div className="mt-5 flex flex-col gap-7">
+              {group.fields.map((key) => (
+                <FieldControl
+                  key={key}
+                  def={FIELD[key]}
+                  selection={filters[key]}
+                  onChange={(next) => onFiltersChange({ ...filters, [key]: next } as BucketFilters)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Industry */}
+        <div>
+          <SectionLabel index="04" label="Industry Groups" />
+          <div className="mt-5">
+            <IndustryFilterControl
+              industryGroups={industryGroups}
+              selected={filters.industry}
+              onChange={(next) => onFiltersChange({ ...filters, industry: next })}
+            />
+          </div>
+        </div>
+      </div>
+    </Dialog>
   )
 }
 

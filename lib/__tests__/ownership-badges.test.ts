@@ -4,7 +4,6 @@
  */
 
 import { test } from "vitest"
-import { getCompanies } from "../dealscope-data"
 import {
   formatBadgePct,
   isElevatedPledge,
@@ -12,6 +11,7 @@ import {
   ownershipBadgeLabel,
   ownershipBadgeTitle,
 } from "../ownership-badges"
+import { getCompanies } from "../universe"
 import { check } from "./check"
 
 test("formatBadgePct", () => {

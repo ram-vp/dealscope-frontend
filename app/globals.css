@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -25,6 +24,8 @@
   --muted-foreground: oklch(0.44 0.02 60);
   --accent: oklch(0.58 0.20 48);
   --accent-foreground: oklch(0.98 0.005 85);
+  --accent-hover: oklch(0.45 0.16 45);
+  --track: oklch(0.84 0.015 85);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0.005 85);
   --border: oklch(0.84 0.015 85);
@@ -57,6 +58,8 @@
   --muted-foreground: oklch(0.72 0.01 250);
   --accent: oklch(0.72 0.19 45);
   --accent-foreground: oklch(0.11 0.012 250);
+  --accent-hover: oklch(0.78 0.16 50);
+  --track: oklch(0.26 0.015 250);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.97 0 0);
   --border: oklch(0.26 0.015 250);
@@ -74,9 +77,9 @@
 }
 
 @theme inline {
-  --font-sans: "IBM Plex Sans", "IBM Plex Sans Fallback", sans-serif;
-  --font-mono: "IBM Plex Mono", "IBM Plex Mono Fallback", monospace;
-  --font-display: "Bebas Neue", "Bebas Neue Fallback", sans-serif;
+  --font-sans: var(--font-ibm-plex-sans), sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), monospace;
+  --font-display: var(--font-bebas), sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -90,6 +93,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
@@ -214,4 +218,78 @@
 .ds-slider:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 4px;
+}
+
+/* Deep links: `/` is prerendered as the landing page, so lib/boot-script.ts
+   flags the document and the landing markup stays hidden until the app has
+   applied the URL. */
+.deeplink-placeholder {
+  display: none;
+}
+html[data-deeplink] .deeplink-placeholder {
+  display: block;
+}
+html[data-deeplink] .landing-root {
+  display: none;
+}
+
+/* Motion: opacity and transform only. Starts just above 0 so the incoming
+   view still counts as painted for LCP. */
+.view-enter {
+  animation: ds-fade 120ms ease-out;
+}
+.bar-grow {
+  animation: ds-grow 300ms ease-out;
+}
+.ds-skeleton {
+  animation: ds-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ds-fade {
+  from {
+    opacity: 0.01;
+  }
+}
+@keyframes ds-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes ds-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Long lists: skip layout and paint for rows that are off screen. */
+.result-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 150px;
+}
+
+/* Drawers (components/ui/dialog.tsx) */
+.ds-drawer[open] {
+  animation: ds-slide-in 250ms ease-out;
+}
+.ds-drawer::backdrop {
+  background: color-mix(in oklab, var(--background) 80%, transparent);
+}
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+@keyframes ds-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  *::backdrop {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

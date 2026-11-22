@@ -3,12 +3,12 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { IBM_Plex_Sans, IBM_Plex_Mono, Bebas_Neue } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { SmoothScroll } from "@/components/smooth-scroll"
 import { DataFreshness, PRICES_AS_OF, FUNDAMENTALS_AS_OF } from "@/components/dealscope/data-freshness"
 import { DealScopeLogo } from "@/components/dealscope/dealscope-logo"
 import { StaleDataBanner } from "@/components/dealscope/stale-data-banner"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { BOOT_SCRIPT } from "@/lib/boot-script"
 import "./globals.css"
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -79,6 +79,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark bg-background" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+      </head>
       <body
         className={`${ibmPlexSans.variable} ${bebasNeue.variable} ${ibmPlexMono.variable} font-sans antialiased overflow-x-hidden`}
       >
@@ -112,7 +115,9 @@ export default function RootLayout({
             </div>
           </header>
           <StaleDataBanner />
-          <SmoothScroll>{children}</SmoothScroll>
+          <main id="main" tabIndex={-1}>
+            {children}
+          </main>
           <Analytics />
         </ThemeProvider>
       </body>

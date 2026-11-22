@@ -1,91 +1,65 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { asString, type CompanyNews } from "@/lib/dealscope-data"
+import { useCallback, useEffect, useState } from "react"
+import type { CompanyNews } from "@/lib/dealscope-data"
+import { detailPath } from "@/lib/data-paths"
 
 export interface CompanyNarrative {
   about: string | null
   whyThisScore: string | null
 }
 
-const EMPTY_NEWS: CompanyNews = { filings: [], bseNotices: [], news: [] }
-const EMPTY_NARRATIVE: CompanyNarrative = { about: null, whyThisScore: null }
-
-type NarrativeFile = Record<string, { about?: unknown; why_this_score?: unknown; rationale?: unknown }>
-
-let narrativesPromise: Promise<Record<string, CompanyNarrative>> | null = null
-let newsPromise: Promise<Map<string, CompanyNews>> | null = null
-
-function toArray<T>(v: unknown): T[] {
-  return Array.isArray(v) ? (v as T[]) : []
-}
-
-function normalizeNewsEntry(raw: unknown): CompanyNews {
-  const r = (raw ?? {}) as Record<string, unknown>
-  return {
-    filings: toArray(r.filings),
-    bseNotices: toArray(r.bseNotices),
-    news: toArray(r.news),
-  }
-}
-
-async function loadNarratives(): Promise<Record<string, CompanyNarrative>> {
-  const mod = await import("@/data/narratives.json")
-  const raw = mod.default as NarrativeFile
-  const out: Record<string, CompanyNarrative> = {}
-  for (const [ticker, entry] of Object.entries(raw)) {
-    out[ticker] = {
-      about: asString(entry?.about),
-      whyThisScore: asString(entry?.why_this_score) ?? asString(entry?.rationale),
-    }
-  }
-  return out
-}
-
-async function loadNews(): Promise<Map<string, CompanyNews>> {
-  const mod = await import("@/data/news.json")
-  const raw = mod.default as unknown
-  const map = new Map<string, CompanyNews>()
-  if (Array.isArray(raw)) {
-    for (const entry of raw) {
-      const ticker = (entry as { ticker?: string })?.ticker
-      if (ticker) map.set(ticker, normalizeNewsEntry(entry))
-    }
-  } else if (raw && typeof raw === "object") {
-    for (const [ticker, entry] of Object.entries(raw as Record<string, unknown>)) {
-      map.set(ticker, normalizeNewsEntry(entry))
-    }
-  }
-  return map
-}
-
-export function prefetchCompanyDetails(): void {
-  if (!narrativesPromise) narrativesPromise = loadNarratives()
-  if (!newsPromise) newsPromise = loadNews()
-}
-
-export function useCompanyDetails(ticker: string): {
-  ready: boolean
+export interface CompanyDetails {
   narrative: CompanyNarrative
   news: CompanyNews
-} {
-  const [ready, setReady] = useState(false)
-  const [narrative, setNarrative] = useState<CompanyNarrative>(EMPTY_NARRATIVE)
-  const [news, setNews] = useState<CompanyNews>(EMPTY_NEWS)
+}
+
+const EMPTY: CompanyDetails = {
+  narrative: { about: null, whyThisScore: null },
+  news: { filings: [], bseNotices: [], news: [] },
+}
+
+const requests = new Map<string, Promise<Record<string, CompanyDetails>>>()
+
+function loadShard(path: string): Promise<Record<string, CompanyDetails>> {
+  let request = requests.get(path)
+  if (!request) {
+    request = fetch(path).then((res) => {
+      if (!res.ok) throw new Error(`${path} returned ${res.status}`)
+      return res.json()
+    })
+    // Never cache a failure, or Retry would replay it.
+    request.catch(() => requests.delete(path))
+    requests.set(path, request)
+  }
+  return request
+}
+
+export type DetailsStatus = "loading" | "ready" | "error"
+
+export function useCompanyDetails(ticker: string): CompanyDetails & { status: DetailsStatus; retry: () => void } {
+  const [attempt, setAttempt] = useState(0)
+  const key = `${ticker}#${attempt}`
+  const [result, setResult] = useState<{ key: string; status: DetailsStatus; details: CompanyDetails } | null>(null)
 
   useEffect(() => {
-    prefetchCompanyDetails()
     let cancelled = false
-    Promise.all([narrativesPromise, newsPromise]).then(([narr, newsMap]) => {
-      if (cancelled || !narr || !newsMap) return
-      setNarrative(narr[ticker] ?? EMPTY_NARRATIVE)
-      setNews(newsMap.get(ticker) ?? EMPTY_NEWS)
-      setReady(true)
-    })
+    loadShard(detailPath(ticker)).then(
+      (shard) => {
+        const details = Object.hasOwn(shard, ticker) ? shard[ticker] : EMPTY
+        if (!cancelled) setResult({ key, status: "ready", details })
+      },
+      () => {
+        if (!cancelled) setResult({ key, status: "error", details: EMPTY })
+      },
+    )
     return () => {
       cancelled = true
     }
-  }, [ticker])
+  }, [ticker, key])
 
-  return { ready, narrative, news }
+  const retry = useCallback(() => setAttempt((n) => n + 1), [])
+  const current = result?.key === key ? result : null
+
+  return { ...(current?.details ?? EMPTY), status: current?.status ?? "loading", retry }
 }

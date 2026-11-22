@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 import datasetMeta from "@/data/dataset-meta.json"
 import { FUNDAMENTALS_AS_OF, PRICES_AS_OF, formatAsOfDate } from "@/components/dealscope/data-freshness"
 
@@ -15,12 +15,15 @@ function utcDaysBetween(iso: string | null | undefined, now: Date): number | nul
   return Math.floor((today - asOf) / 86_400_000)
 }
 
-export function StaleDataBanner() {
-  const [days, setDays] = useState<number | null>(null)
+const noSubscription = () => () => {}
 
-  useEffect(() => {
-    setDays(utcDaysBetween(datasetMeta.fundamentals_as_of, new Date()))
-  }, [])
+export function StaleDataBanner() {
+  // Client-only: the page is prerendered, so "days ago" can't be baked in.
+  const days = useSyncExternalStore(
+    noSubscription,
+    () => utcDaysBetween(datasetMeta.fundamentals_as_of, new Date()),
+    () => null,
+  )
 
   if (days == null || days <= STALE_AFTER_DAYS) return null
 

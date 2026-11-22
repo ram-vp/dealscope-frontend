@@ -1,5 +1,3 @@
-import companiesData from "@/data/companies.json"
-import dealsData from "@/data/deals.json"
 import filterBandsData from "@/data/filter-bands.json"
 
 export interface Weights {
@@ -407,9 +405,13 @@ export function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null
 }
 
+// One formatter for the whole universe: toLocaleString() builds a new one per
+// call, and mapping ~2,400 companies makes ~10,000 of those calls.
+const EN_IN = new Intl.NumberFormat("en-IN")
+
 function formatCr(value: number | null | undefined): string {
   if (!isNum(value)) return "N/A"
-  return `₹${Math.round(value / 1e7).toLocaleString("en-IN")} Cr`
+  return `₹${EN_IN.format(Math.round(value / 1e7))} Cr`
 }
 
 function formatPct(value: number | null | undefined): string {
@@ -457,7 +459,7 @@ export function formatImpliedEquityRange(
 // (produced by export_for_frontend.py from the real scoring/valuation engine)
 // ---------------------------------------------------------------------------
 
-interface CompanyRecord {
+export interface CompanyRecord {
   ticker: string
   name: string
   sector: string
@@ -511,7 +513,7 @@ export interface DealRow {
   ev_ebitda?: number | null
 }
 
-function mapCompanyRecord(r: CompanyRecord): Company {
+export function mapCompanyRecord(r: CompanyRecord): Company {
   return {
     name: r.name,
     ticker: r.ticker,
@@ -592,35 +594,18 @@ function mapCompanyRecord(r: CompanyRecord): Company {
 }
 
 // ---------------------------------------------------------------------------
-// Data access -- everything is a bundled local JSON file, no network call,
-// no database, no account. Computed once and memoized module-side since the
-// underlying data never changes at runtime.
+// Aggregates over a company list. The list itself comes from lib/universe.ts
+// (server, tests) or lib/use-universe.ts (browser), never from this module:
+// importing the JSON here would put all of it in every bundle.
 // ---------------------------------------------------------------------------
 
-const ALL_COMPANIES: Company[] = (companiesData as CompanyRecord[]).map(mapCompanyRecord)
-const ALL_DEALS: DealRow[] = dealsData as DealRow[]
-
-const ALL_SECTORS: Sector[] = (() => {
+export function getSectors(companies: Company[]): Sector[] {
   const counts = new Map<string, number>()
-  for (const c of ALL_COMPANIES) {
+  for (const c of companies) {
     counts.set(c.sector, (counts.get(c.sector) ?? 0) + 1)
   }
   return Array.from(counts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
-})()
-
-// Sorted by count so the typeahead's default (pre-search) list leads with the
-// most common industries; alphabetical within a tie for stable ordering.
-const ALL_INDUSTRIES: IndustryOption[] = (() => {
-  const counts = new Map<string, number>()
-  for (const c of ALL_COMPANIES) {
-    if (c.industry) counts.set(c.industry, (counts.get(c.industry) ?? 0) + 1)
-  }
-  return Array.from(counts, ([name, count]) => ({ name, count })).sort(
-    (a, b) => b.count - a.count || a.name.localeCompare(b.name),
-  )
-})()
-
-const DATA_AS_OF: string = (companiesData as CompanyRecord[])[0]?.as_of_date ?? ""
+}
 
 export function compareScores(a: number | null, b: number | null): number {
   if (a == null && b == null) return 0
@@ -634,7 +619,7 @@ export function compareScores(a: number | null, b: number | null): number {
  *  the FULL company list, not an already industry-filtered one: this counts
  *  what's available to narrow into, so selecting one industry can't shrink
  *  the very list used to offer the others. Global (no sectors given) falls
- *  back to the same counts as getCompanies().industries. */
+ *  back to the whole universe's counts. */
 export function getIndustriesForSectors(companies: Company[], sectorNames: string[]): IndustryOption[] {
   const scoped = sectorNames.length > 0 ? companies.filter((c) => sectorNames.includes(c.sector)) : companies
   const counts = new Map<string, number>()
@@ -662,7 +647,8 @@ export interface IndustryGroup {
  *  which sectors get a group at all (empty = every sector), independent of
  *  the sector-level company counts, same convention as getIndustriesForSectors. */
 export function getIndustryGroups(companies: Company[], sectorNames: string[] = []): IndustryGroup[] {
-  const scopedSectors = (sectorNames.length > 0 ? ALL_SECTORS.filter((s) => sectorNames.includes(s.name)) : ALL_SECTORS)
+  const allSectors = getSectors(companies)
+  const scopedSectors = (sectorNames.length > 0 ? allSectors.filter((s) => sectorNames.includes(s.name)) : allSectors)
     .filter((s) => s.name.toLowerCase() !== "unclassified")
   return scopedSectors
     .map((sector) => ({ sector: sector.name, industries: getIndustriesForSectors(companies, [sector.name]) }))
@@ -687,28 +673,6 @@ export function filterIndustryGroups(groups: IndustryGroup[], query: string): In
   return groups
     .map((g) => ({ sector: g.sector, industries: g.industries.filter((ind) => normalizeForSearch(ind.name).includes(q)) }))
     .filter((g) => g.industries.length > 0)
-}
-
-const ALL_INDUSTRY_GROUPS: IndustryGroup[] = getIndustryGroups(ALL_COMPANIES)
-
-export function getCompanies(): {
-  companies: Company[]
-  sectors: Sector[]
-  industries: IndustryOption[]
-  industryGroups: IndustryGroup[]
-  dataAsOf: string
-} {
-  return {
-    companies: ALL_COMPANIES,
-    sectors: ALL_SECTORS,
-    industries: ALL_INDUSTRIES,
-    industryGroups: ALL_INDUSTRY_GROUPS,
-    dataAsOf: DATA_AS_OF,
-  }
-}
-
-export function getDeals(): DealRow[] {
-  return ALL_DEALS
 }
 
 // ---------------------------------------------------------------------------
@@ -970,8 +934,8 @@ function tokenMatches(token: string, haystack: string, words: string[]): boolean
 }
 
 // ---------------------------------------------------------------------------
-// Per-company search index -- ticker/name/sector normalized once at module
-// load instead of on every matchTier() call. Search runs against the full
+// Per-company search index -- ticker/name/sector normalized once per company
+// (on first search) instead of on every matchTier() call. Search runs against the full
 // universe on every keystroke (see the debounce in dealscope-app.tsx for the
 // other half of the fix), so re-running normalizeForSearch's regex chain for
 // every company on every call was pure repeated work: name/ticker/sector
@@ -1004,16 +968,10 @@ function buildSearchEntry(company: Company): SearchIndexEntry {
 }
 
 const SEARCH_INDEX = new WeakMap<Company, SearchIndexEntry>()
-for (const company of ALL_COMPANIES) {
-  SEARCH_INDEX.set(company, buildSearchEntry(company))
-}
 
 function getSearchEntry(company: Company): SearchIndexEntry {
   const cached = SEARCH_INDEX.get(company)
   if (cached) return cached
-  // Defensive fallback, not expected to fire in practice -- every Company
-  // that exists is constructed once in mapCompanyRecord() and indexed below
-  // right after, so this only matters if that invariant ever changes.
   const entry = buildSearchEntry(company)
   SEARCH_INDEX.set(company, entry)
   return entry

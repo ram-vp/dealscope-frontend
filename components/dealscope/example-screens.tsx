@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { BitmapChevron } from "@/components/bitmap-chevron"
 import { type ExampleScreen } from "@/lib/example-screens"
 
@@ -38,12 +37,8 @@ export function ExampleScreens({ screens, onApply, variant = "cards" }: ExampleS
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {screens.map(({ screen, count }, i) => (
-        <motion.div
+        <div
           key={screen.id}
-          initial={{ opacity: 0, y: 4 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ delay: Math.min(i, 4) * 0.03, duration: 0.18, ease: "easeOut" }}
         >
           <button
             onClick={() => onApply(screen)}
@@ -72,7 +67,7 @@ export function ExampleScreens({ screens, onApply, variant = "cards" }: ExampleS
               <BitmapChevron className="transition-transform duration-[300ms] ease-in-out group-hover:rotate-45 text-muted-foreground group-hover:text-accent" />
             </div>
           </button>
-        </motion.div>
+        </div>
       ))}
     </div>
   )

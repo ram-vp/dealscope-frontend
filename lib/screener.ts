@@ -3,18 +3,13 @@
 // the per-company "why this passed" reasons that fall out of the same pass.
 //
 // ARCHITECTURE NOTE -- why this is a module and not an HTTP endpoint.
-// DealScope's frontend is deliberately, entirely static: it imports
-// companies.json at build time and ships with no server, no database and no
-// API route (verified: zero files under app/api, zero route handlers, zero
-// "use server"). Screening 2,381 in-memory records is a sub-millisecond array
-// pass, so a network round-trip to a filtering endpoint would make every
-// keystroke *slower* than doing the work locally, and would break the
-// two-way-sync requirement (live counts have to update as the user types).
-// This module IS the filtering engine -- same structured input, same ranked
-// output, just called directly instead of over HTTP. If a server-side screener
-// is ever genuinely needed (e.g. a public API for other clients), this file is
-// already the pure, dependency-free core to lift into it: it imports only
-// types and the existing scorer.
+// DealScope has no request-time server: the route handlers under app/data/ are
+// prerendered to static files. The browser downloads the universe once, and
+// screening ~2,400 in-memory records is a sub-millisecond array pass, so a
+// round-trip to a filtering endpoint would make every keystroke *slower* and
+// break the live counts that update as the user types. This module IS the
+// filtering engine. It imports only types and the existing scorer, so it can
+// be lifted into a server-side screener if one is ever needed.
 //
 // The scoring engine is untouched. computeScore() still produces the
 // sector-relative composite (re-weighting only the factors that exist),

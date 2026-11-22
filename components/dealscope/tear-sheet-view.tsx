@@ -1,8 +1,6 @@
 "use client"
 
 import type React from "react"
-import { motion } from "framer-motion"
-import { AnimatedNoise } from "@/components/animated-noise"
 import { ScoreRing } from "@/components/dealscope/score-ring"
 import {
   type Company,
@@ -20,6 +18,7 @@ import { useCompanyDetails } from "@/lib/company-details"
 import { formatAsOfDate } from "@/components/dealscope/data-freshness"
 import { OwnershipBadge } from "@/components/dealscope/ownership-badges"
 import { FactorRadarChart } from "@/components/dealscope/factor-radar-chart"
+import { LoadError } from "@/components/dealscope/view-status"
 import { cn } from "@/lib/utils"
 
 interface TearSheetViewProps {
@@ -38,7 +37,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
   const peers = findClosestPeers(company, companies, 5)
   const comparables = comparablesForSector(company.sectorKey, deals)
   const comparableCount = comparableCountForSector(company.sectorKey, deals)
-  const { ready: detailsReady, narrative, news: companyNews } = useCompanyDetails(company.ticker)
+  const { status: detailsStatus, retry, narrative, news: companyNews } = useCompanyDetails(company.ticker)
   const hasAbout = Boolean(narrative.about)
   const hasWhyThisScore = Boolean(narrative.whyThisScore)
   const unclassified = company.sector === "Unclassified"
@@ -73,8 +72,6 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
 
   return (
     <section className="relative min-h-screen px-6 md:px-12 py-12 md:py-20 max-w-7xl mx-auto">
-      <AnimatedNoise opacity={0.02} />
-
       <div className="relative z-10">
         {/* Back */}
         <button
@@ -93,14 +90,11 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
               <span className="text-border">/</span>
               <span className="break-words">{company.sector}</span>
             </span>
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+            <h1
               className="mt-2 font-[family-name:var(--font-bebas)] text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[0.92] tracking-tight text-balance break-words text-foreground"
             >
               {company.name.toUpperCase()}
-            </motion.h1>
+            </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-2.5">
               <span className="border border-border bg-card/30 px-2 sm:px-2.5 py-1 font-mono text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">
                 NSE: {company.ticker}
@@ -127,10 +121,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
           </div>
 
           {/* Composite Score Pod */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+          <div
             className="flex items-center gap-4 sm:gap-5 shrink-0 pt-2 lg:pt-0"
           >
             <ScoreRing score={score} size={88} strokeWidth={3} sectorAverage={avg} />
@@ -143,7 +134,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                 {unclassified ? "Unclassified: not scored" : "Sector-relative · 0–100"}
               </span>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* 01 / Key Financials */}
@@ -201,7 +192,7 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
 
                 {/* 4 Factor Rows */}
                 <div className="flex flex-col divide-y divide-border/20">
-                  {FACTOR_LABELS.map((factor, i) => (
+                  {FACTOR_LABELS.map((factor) => (
                     <FactorRow
                       key={factor.key}
                       label={factor.label}
@@ -209,7 +200,6 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                       weight={weights[factor.key]}
                       metric={company.metrics[factor.metricKey]}
                       explainer={factor.explainer}
-                      delay={0.04 * i}
                     />
                   ))}
                 </div>
@@ -364,15 +354,14 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                   </span>
                 </div>
                 {hasAbout ? (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.06, duration: 0.35 }}
+                  <p
                     className="font-sans text-sm md:text-base leading-relaxed text-foreground/90 text-pretty"
                   >
                     {narrative.about}
-                  </motion.p>
-                ) : !detailsReady ? (
+                  </p>
+                ) : detailsStatus === "error" ? (
+                  <LoadError message="This section could not be loaded." onRetry={retry} />
+                ) : detailsStatus === "loading" ? (
                   <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground/70 py-4">
                     Loading profile...
                   </p>
@@ -400,15 +389,14 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
                   </span>
                 </div>
                 {hasWhyThisScore ? (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.08, duration: 0.35 }}
+                  <p
                     className="font-sans text-sm md:text-base leading-relaxed text-foreground/90 text-pretty"
                   >
                     {narrative.whyThisScore}
-                  </motion.p>
-                ) : !detailsReady ? (
+                  </p>
+                ) : detailsStatus === "error" ? (
+                  <LoadError message="This section could not be loaded." onRetry={retry} />
+                ) : detailsStatus === "loading" ? (
                   <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground/70 py-4">
                     Loading rationale...
                   </p>
@@ -692,21 +680,21 @@ export function TearSheetView({ company, weights, onBack, companies, deals, onSe
             {/* NSE regulatory filings */}
             <NewsColumn title="NSE Filings" count={companyNews.filings.length} emptyLabel="No recent filings found">
               {companyNews.filings.map((f, i) => (
-                <NewsRow key={`${f.category}-${f.date}-${i}`} index={i} href={f.link} date={f.date} title={f.category} />
+                <NewsRow key={`${f.category}-${f.date}-${i}`} href={f.link} date={f.date} title={f.category} />
               ))}
             </NewsColumn>
 
             {/* BSE notices */}
             <NewsColumn title="BSE Notices" count={companyNews.bseNotices.length} emptyLabel="No recent notices found">
               {companyNews.bseNotices.map((n, i) => (
-                <NewsRow key={`${n.title}-${n.date}-${i}`} index={i} href={n.link} date={n.date} title={n.title} />
+                <NewsRow key={`${n.title}-${n.date}-${i}`} href={n.link} date={n.date} title={n.title} />
               ))}
             </NewsColumn>
 
             {/* Press / news */}
             <NewsColumn title="News" count={companyNews.news.length} emptyLabel="No recent coverage found">
               {companyNews.news.map((n, i) => (
-                <NewsRow key={`${n.headline}-${n.date}-${i}`} index={i} href={n.link} date={n.date} title={n.headline} source={n.source} />
+                <NewsRow key={`${n.headline}-${n.date}-${i}`} href={n.link} date={n.date} title={n.headline} source={n.source} />
               ))}
             </NewsColumn>
           </div>
@@ -802,26 +790,21 @@ function NewsColumn({
 }
 
 function NewsRow({
-  index,
   href,
   date,
   title,
   source,
 }: {
-  index: number
   href: string
   date: string
   title: string
   source?: string
 }) {
   return (
-    <motion.a
+    <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.1 + Math.min(index, 6) * 0.03, duration: 0.3 }}
       className="group block border-b border-border/25 py-4 hover:bg-accent/5 transition-colors duration-200"
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -841,7 +824,7 @@ function NewsRow({
           {source}
         </span>
       )}
-    </motion.a>
+    </a>
   )
 }
 
@@ -851,14 +834,12 @@ function FactorRow({
   weight,
   metric,
   explainer,
-  delay,
 }: {
   label: string
   value: number | null
   weight: number
   metric: string
   explainer: string
-  delay: number
 }) {
   const missing = value == null
   return (
@@ -881,11 +862,9 @@ function FactorRow({
 
       {/* Progress Track */}
       <div className="mt-2.5 h-[3px] bg-border/40 relative overflow-hidden">
-        <motion.div
-          className="absolute inset-y-0 left-0 bg-accent shadow-[0_0_6px_#f59e0b]"
-          initial={{ width: 0 }}
-          animate={{ width: missing ? "0%" : `${value}%` }}
-          transition={{ delay: 0.08 + delay, duration: 0.5, ease: [0.22, 0.61, 0.36, 1] }}
+        <div
+          className="bar-grow absolute inset-0 origin-left bg-accent"
+          style={{ scale: `${missing ? 0 : value / 100} 1` }}
         />
       </div>
 

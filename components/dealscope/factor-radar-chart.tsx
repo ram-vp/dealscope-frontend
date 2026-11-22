@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useId, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { type FactorScores, type Weights } from "@/lib/dealscope-data"
 
 interface FactorRadarChartProps {
@@ -94,7 +93,7 @@ export function FactorRadarChart({
   const p25Points = axes.map((a) => getPoint(getRadius(25), a.angle)).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
 
   // Target company polygon points (Handles FIG 3-point triangle or standard 4-point quadrilateral)
-  const targetPolygonPoints = useMemo(() => {
+  const targetPolygonPoints = (() => {
     const validAxes = isFig && factors.debtLevel == null ? axes.filter((a) => a.key !== "debtLevel") : axes
     return validAxes
       .map((axis) => {
@@ -104,7 +103,7 @@ export function FactorRadarChart({
         return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`
       })
       .join(" ")
-  }, [axes, factors, isFig, maxRadius, minRadius, cx, cy])
+  })()
 
   // Company Archetype diagnosis in simple plain language
   const archetype = useMemo(() => {
@@ -237,15 +236,12 @@ export function FactorRadarChart({
           })}
 
           {/* Target Company Active Polygon */}
-          <motion.polygon
+          <polygon
             points={targetPolygonPoints}
             fill={`url(#radar-fill-${filterId})`}
             stroke="var(--accent)"
             strokeWidth="2.5"
             filter={`url(#radar-glow-${filterId})`}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
           />
 
           {/* Center Point Crosshair */}
@@ -397,13 +393,8 @@ export function FactorRadarChart({
         </div>
 
         {/* Floating Telemetry HUD Tooltip Card */}
-        <AnimatePresence>
           {hoveredIndex !== null && (
-            <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.12 }}
+            <div
               className="absolute left-1/2 bottom-2 -translate-x-1/2 z-30 pointer-events-none bg-popover/95 border border-accent/50 p-3 shadow-2xl backdrop-blur-md w-[240px] max-w-[calc(100%-20px)]"
             >
               <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-1.5 mb-1.5 font-mono text-[11px]">
@@ -435,9 +426,8 @@ export function FactorRadarChart({
               <p className="font-mono text-[10px] text-muted-foreground/80 mt-1.5 pt-1.5 border-t border-border/30 leading-relaxed">
                 {axes[hoveredIndex].explainer}
               </p>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </div>
 
       {/* Legend Footer */}

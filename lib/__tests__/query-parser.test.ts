@@ -8,8 +8,9 @@
 import { test } from "vitest"
 import { parseQuery, screenAfterClearedSearch, screenFromTypedQuery, screenToQuery } from "../query-parser"
 import { countScreen, makeScreen, runScreen, NUMERIC_FIELD_KEYS, type ScreenFilters } from "../screener"
-import { getCompanies, DEFAULT_WEIGHTS } from "../dealscope-data"
+import { DEFAULT_WEIGHTS } from "../dealscope-data"
 import sectorBands from "@/data/sector-bands.json"
+import { getCompanies } from "../universe"
 import { check } from "./check"
 
 const { companies } = getCompanies()

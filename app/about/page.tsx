@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Linkedin, Mail, ArrowUpRight } from "lucide-react"
-import { AnimatedNoise } from "@/components/animated-noise"
 import { FUNDAMENTALS_AS_OF, PRICES_AS_OF } from "@/components/dealscope/data-freshness"
 import datasetMeta from "@/data/dataset-meta.json"
 
@@ -29,8 +28,6 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle?: string 
 export default function AboutPage() {
   return (
     <section className="relative min-h-screen px-4 sm:px-6 md:px-10 lg:px-16 py-10 md:py-16 bg-background text-foreground">
-      <AnimatedNoise opacity={0.02} />
-
       {/* Main Centered Container */}
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Back Link */}

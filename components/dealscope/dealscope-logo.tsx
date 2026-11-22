@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -24,11 +22,6 @@ export function DealScopeLogo({ className, size = 30 }: DealScopeLogoProps) {
   return (
     <Link
       href="/"
-      onClick={() => {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("popstate"))
-        }
-      }}
       className={cn(
         "group inline-flex items-center justify-center shrink-0 select-none text-accent hover:opacity-85 transition-opacity duration-150 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-accent",
         className,

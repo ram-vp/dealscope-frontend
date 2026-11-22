@@ -13,7 +13,8 @@ interface ScreenBarProps {
   filters: ScreenFilters
   onRemoveChip: (chip: FilterChip) => void
   onClearAll: () => void
-  matchCount: number
+  /** null while the universe is still downloading. */
+  matchCount: number | null
   totalCount: number
   recognised: boolean
   placeholder?: string
@@ -43,7 +44,7 @@ export function ScreenBar({
   const inputRef = useRef<HTMLInputElement>(null)
   const chips = screenChips(filters)
   const activeCount = countActiveConstraints(filters)
-  const isFiltered = matchCount !== totalCount
+  const isFiltered = matchCount !== null && matchCount !== totalCount
   const hasQuery = query.trim().length > 0
   const showCount =
     !hideIdleCount || isFiltered || hasQuery || recognised || activeCount > 0 || chips.length > 0
@@ -98,6 +99,7 @@ export function ScreenBar({
 
           <input
             ref={inputRef}
+            data-screen-input
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
@@ -141,6 +143,10 @@ export function ScreenBar({
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           {showCount && (
             <span className="font-mono text-xs">
+              {matchCount === null ? (
+                <span className="text-muted-foreground">Counting matches…</span>
+              ) : (
+                <>
               <span className={cn(isFiltered ? "text-accent font-semibold" : "text-foreground font-medium")}>
                 {matchCount.toLocaleString("en-IN")}
               </span>
@@ -149,6 +155,8 @@ export function ScreenBar({
                 {matchCount === 1 ? "company" : "companies"}
                 {isFiltered && ` of ${totalCount.toLocaleString("en-IN")}`}
               </span>
+                </>
+              )}
             </span>
           )}
 
