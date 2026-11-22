@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { SlidersHorizontal } from "lucide-react"
 import { BitmapChevron } from "@/components/bitmap-chevron"
 import { SectorIndustryFilter } from "@/components/dealscope/sector-industry-filter"
@@ -395,19 +394,6 @@ export function LandingView({
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-8 sm:py-10 px-4 sm:px-6 md:px-12 bg-background font-mono text-xs text-muted-foreground">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-center sm:text-left">
-          <span>DEALSCOPE · Listed India comps</span>
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link href="/about" className="hover:text-accent transition-colors">
-              Methodology
-            </Link>
-            <span className="text-border">·</span>
-            <span>Built by Ram</span>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

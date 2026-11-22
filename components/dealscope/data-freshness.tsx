@@ -19,10 +19,30 @@ export const FUNDAMENTALS_AS_OF_MAX = formatAsOfDate(datasetMeta.fundamentals_as
 export function DataFreshness({
   className,
   align = "start",
+  compact = false,
 }: {
   className?: string
   align?: "start" | "end"
+  /** The one-line strip shown under the header on phones. */
+  compact?: boolean
 }) {
+  if (compact) {
+    return (
+      <p
+        className={cn(
+          "flex flex-wrap justify-center gap-x-3 border-b border-border px-2 py-1.5 font-mono text-xs text-muted-foreground",
+          className,
+        )}
+      >
+        <span>
+          Prices <strong className="font-semibold text-foreground">{PRICES_AS_OF}</strong>
+        </span>
+        <span>
+          Fundamentals <strong className="font-semibold text-foreground">{FUNDAMENTALS_AS_OF}</strong>
+        </span>
+      </p>
+    )
+  }
   return (
     <div
       className={cn(
@@ -30,7 +50,7 @@ export function DataFreshness({
         align === "end" && "sm:justify-end",
         className,
       )}
-      role="status"
+      role="group"
       aria-label={`NSE telemetry. Prices as of ${PRICES_AS_OF}. Fundamentals as of ${FUNDAMENTALS_AS_OF}.`}
     >
       {/* Prices Telemetry Chip */}

@@ -1,7 +1,8 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import { Linkedin, Mail, ArrowUpRight } from "lucide-react"
 import { FUNDAMENTALS_AS_OF, PRICES_AS_OF } from "@/components/dealscope/data-freshness"
+import { JsonLd } from "@/components/site/json-ld"
+import { breadcrumbJsonLd, pageMetadata } from "@/lib/seo"
 import datasetMeta from "@/data/dataset-meta.json"
 import { getCompanies } from "@/lib/universe"
 
@@ -12,11 +13,12 @@ const UNPLEDGED_SHARE = Math.round(
   (PLEDGE_REPORTED.filter((c) => c.raw.promoterPledge === 0).length / PLEDGE_REPORTED.length) * 100,
 )
 
-export const metadata: Metadata = {
-  title: "About & Methodology: DealScope",
+export const metadata = pageMetadata({
+  path: "/about",
+  title: "About & Methodology",
   description:
     "How DealScope screens NSE-listed companies for acquisition fit: sector-relative percentile scoring, listed-peer trading multiple valuation bands, and data governance.",
-}
+})
 
 function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -36,6 +38,7 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle?: string 
 export default function AboutPage() {
   return (
     <section className="relative min-h-screen px-4 sm:px-6 md:px-10 lg:px-16 py-10 md:py-16 bg-background text-foreground">
+      <JsonLd data={breadcrumbJsonLd("About & Methodology", "/about")} />
       {/* Main Centered Container */}
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Back Link */}
@@ -360,7 +363,11 @@ export default function AboutPage() {
               <p>
                 DealScope is an independent quantitative screening tool. It is not SEBI-registered investment advice,
                 not a recommendation to buy or sell securities, and not an M&amp;A advisory fairness opinion.
-                All calculations are automated from third-party and exchange data. Always verify numbers independently.
+                All calculations are automated from third-party and exchange data. Always verify numbers independently.{" "}
+                <Link href="/disclaimer" className="text-accent underline underline-offset-4">
+                  Read the full disclaimer
+                </Link>
+                .
               </p>
             </div>
           </section>

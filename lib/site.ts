@@ -11,3 +11,12 @@ export const SITE = {
   email: "ramsuthakaran.vp@gmail.com",
   linkedin: "https://www.linkedin.com/in/ramsuthakaran-vp-778b4731b/",
 } as const
+
+/** The date the legal pages took effect. Change it whenever their substance changes. */
+export const LEGAL_UPDATED = "2026-11-22"
+
+export const LEGAL_PAGES = [
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+  { href: "/disclaimer", label: "Disclaimer" },
+] as const

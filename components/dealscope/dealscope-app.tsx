@@ -115,6 +115,8 @@ export function DealScopeApp({ summary }: { summary: UniverseSummary }) {
     document.documentElement.removeAttribute("data-deeplink")
 
     const onPopState = () => {
+      // Hash-only moves (the skip link) aren't a view change.
+      if (window.location.search === appliedSearch.current) return
       focusHeading.current = true
       restoreScroll.current = true
       syncFromUrl()

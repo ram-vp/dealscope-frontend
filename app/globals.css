@@ -233,6 +233,63 @@ html[data-deeplink] .landing-root {
   display: none;
 }
 
+.skip-link {
+  position: fixed;
+  top: max(0.5rem, env(safe-area-inset-top));
+  left: 0.5rem;
+  z-index: 100;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding-inline: 1rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.875rem;
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+
+/* Long-form pages (privacy, terms, disclaimer) */
+.prose-ds {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.prose-ds section + section {
+  margin-top: 2.5rem;
+}
+.prose-ds h2 {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.prose-ds :is(p, ul, dd) {
+  color: var(--muted-foreground);
+}
+.prose-ds :is(p, ul) + :is(p, ul) {
+  margin-top: 0.75rem;
+}
+.prose-ds ul {
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+.prose-ds dt {
+  margin-top: 1rem;
+  font-weight: 600;
+}
+.prose-ds a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+
 /* Motion: opacity and transform only. Starts just above 0 so the incoming
    view still counts as painted for LCP. */
 .view-enter {
