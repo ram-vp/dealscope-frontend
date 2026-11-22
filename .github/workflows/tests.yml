@@ -1,36 +1,115 @@
 name: Tests
 
 on:
+  # Filtered here, not with a job-level `if`: the bot merges and deletes its
+  # branch within seconds, and a run created for it died at startup (a red
+  # "workflow file issue" on every release). apply-data-bot.yml validates
+  # data-only branches itself.
   pull_request:
+    paths-ignore:
+      - 'data/**'
   push:
-    branches: [main]
+    branches: [main, pro-upgrade]
+  # The bot's merges to main don't trigger workflows, so check nightly that
+  # what is being served still equals what the backend published.
+  schedule:
+    - cron: '43 23 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: tests-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '11.14.0'
+  NEXT_TELEMETRY_DISABLED: '1'
+
 jobs:
-  frontend:
-    if: ${{ github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'price-refresh/') && !startsWith(github.head_ref, 'price-sync/')) }}
-    runs-on: ubuntu-latest
+  checks:
+    name: Lint, typecheck, unit, build
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
-
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
       - name: Install
-        run: npm install -g pnpm && pnpm install --frozen-lockfile
-
+        run: npm install -g "pnpm@${PNPM_VERSION}" && pnpm install --frozen-lockfile
       - name: Data validator and canary tests
         run: python3 scripts/test_validate_data.py
-
+      - name: Validate the data being served
+        # Against itself: shape, duplicates, meta, links. Impossible values are
+        # ratcheted by the bot (the placeholders already live are tolerated
+        # until the backend's corrected export replaces them).
+        run: python3 scripts/validate_data.py --candidate data --base data
+      - name: Lint
+        run: pnpm lint --max-warnings 0
       - name: Typecheck
         run: pnpm typecheck
-
-      - name: Tests
+      - name: Unit and number-parity tests
         run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  parity:
+    name: Same numbers as the backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - run: node scripts/check-backend-parity.mjs
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - run: npm install -g "pnpm@${PNPM_VERSION}" && pnpm audit --audit-level high
+
+  browser:
+    name: E2E, accessibility, Lighthouse
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Install
+        run: npm install -g "pnpm@${PNPM_VERSION}" && pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build
+        run: pnpm build
+      - name: E2E and accessibility
+        run: pnpm test:e2e
+      - name: Lighthouse budget
+        run: |
+          pnpm exec next start -p 3000 &
+          timeout 60 bash -c 'until curl -fsS -o /dev/null http://localhost:3000; do sleep 1; done'
+          pnpm lighthouse
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

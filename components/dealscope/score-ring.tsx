@@ -1,7 +1,3 @@
-"use client"
-
-import { motion } from "framer-motion"
-
 interface ScoreRingProps {
   score: number | null
   size?: number
@@ -32,26 +28,24 @@ export function ScoreRing({
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle
           cx={center}
           cy={center}
           r={radius}
           fill="none"
-          stroke="oklch(0.25 0 0)"
+          stroke="var(--track)"
           strokeWidth={strokeWidth}
         />
-        <motion.circle
+        <circle
           cx={center}
           cy={center}
           r={radius}
           fill="none"
-          stroke="oklch(0.7 0.2 45)"
+          stroke="var(--accent)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: circumference - ((hasScore ? score : 0) / 100) * circumference }}
-          transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1] }}
+          strokeDashoffset={circumference - ((hasScore ? score : 0) / 100) * circumference}
         />
       </svg>
       {sectorAverage != null && (
@@ -61,23 +55,23 @@ export function ScoreRing({
             y1={center + tickInner * Math.sin(avgRad)}
             x2={center + tickOuter * Math.cos(avgRad)}
             y2={center + tickOuter * Math.sin(avgRad)}
-            stroke="oklch(0.55 0 0)"
+            stroke="var(--muted-foreground)"
             strokeWidth={1.5}
           />
         </svg>
       )}
+      <span className="sr-only">
+        {hasScore ? `Composite score ${score} out of 100` : "Not scored"}
+        {sectorAverage != null && `, sector average ${sectorAverage}`}
+      </span>
       {showLabel && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <motion.span
-            key={score}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="font-[family-name:var(--font-bebas)] leading-none text-foreground"
-            style={{ fontSize: size * 0.32 }}
+        <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center">
+          <span
+            className="font-display leading-none text-foreground"
+            style={{ fontSize: Math.max(12, size * (hasScore ? 0.36 : 0.28)) }}
           >
             {hasScore ? score : "N/A"}
-          </motion.span>
+          </span>
         </div>
       )}
     </div>

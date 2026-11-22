@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 import datasetMeta from "@/data/dataset-meta.json"
 import { FUNDAMENTALS_AS_OF, PRICES_AS_OF, formatAsOfDate } from "@/components/dealscope/data-freshness"
 
@@ -15,21 +15,24 @@ function utcDaysBetween(iso: string | null | undefined, now: Date): number | nul
   return Math.floor((today - asOf) / 86_400_000)
 }
 
-export function StaleDataBanner() {
-  const [days, setDays] = useState<number | null>(null)
+const noSubscription = () => () => {}
 
-  useEffect(() => {
-    setDays(utcDaysBetween(datasetMeta.fundamentals_as_of, new Date()))
-  }, [])
+export function StaleDataBanner() {
+  // Client-only: the page is prerendered, so "days ago" can't be baked in.
+  const days = useSyncExternalStore(
+    noSubscription,
+    () => utcDaysBetween(datasetMeta.fundamentals_as_of, new Date()),
+    () => null,
+  )
 
   if (days == null || days <= STALE_AFTER_DAYS) return null
 
   return (
-    <div
-      role="status"
+    <aside
+      aria-label="Data freshness warning"
       className="border-b border-accent/40 bg-accent/10 px-6 md:px-12 py-3"
     >
-      <p className="font-mono text-[11px] leading-relaxed text-foreground/90 max-w-4xl">
+      <p className="font-mono text-xs leading-relaxed text-foreground max-w-4xl">
         Fundamentals were last updated {FUNDAMENTALS_AS_OF} ({days} days ago) and
         may not reflect the latest reported results. Prices / market cap last
         updated {PRICES_AS_OF}.
@@ -38,6 +41,6 @@ export function StaleDataBanner() {
           ? ` Some names use ${formatAsOfDate(datasetMeta.fundamentals_as_of_max)}.`
           : null}
       </p>
-    </div>
+    </aside>
   )
 }

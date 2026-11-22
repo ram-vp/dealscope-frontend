@@ -35,7 +35,14 @@ import {
   NUMERIC_FIELD_KEYS,
   makeScreen,
 } from "@/lib/screener"
-import { type BucketFilters, DEFAULT_BUCKET_FILTERS, BUCKET_FIELDS } from "@/lib/dealscope-data"
+import {
+  type BucketFilters,
+  type Weights,
+  DEFAULT_BUCKET_FILTERS,
+  DEFAULT_WEIGHTS,
+  BUCKET_FIELDS,
+  FACTOR_KEYS,
+} from "@/lib/dealscope-data"
 
 const NUMERIC_KEY_SET = new Set<string>(NUMERIC_FIELD_KEYS)
 const MULTI_BUCKET_KEYS = new Set(["marketCap", "promoterPledge"])
@@ -108,10 +115,25 @@ function decodeList(raw: string): string[] {
   return raw ? raw.split(LIST_SEP).filter(Boolean) : []
 }
 
+/** `w=40-20-20-20`, in FACTOR_KEYS order, omitted at the defaults. Without it
+ *  a shared link showed different scores and ranks from the sender's screen. */
+function encodeWeights(weights: Weights | undefined): string {
+  if (!weights || FACTOR_KEYS.every((k) => weights[k] === DEFAULT_WEIGHTS[k])) return ""
+  return FACTOR_KEYS.map((k) => weights[k]).join("-")
+}
+
+function decodeWeights(raw: string): Weights {
+  if (!/^\d{1,3}(-\d{1,3}){3}$/.test(raw)) return { ...DEFAULT_WEIGHTS }
+  const values = raw.split("-").map(Number)
+  if (values.some((v) => v > 100) || values.every((v) => v === 0)) return { ...DEFAULT_WEIGHTS }
+  return Object.fromEntries(FACTOR_KEYS.map((k, i) => [k, values[i]])) as unknown as Weights
+}
+
 export interface UrlState {
   view: "landing" | "results" | "detail"
   ticker: string | null
   screen: ScreenFilters
+  weights?: Weights
 }
 
 /** Serialize to a stable, comparable query string. Key order is fixed so two
@@ -136,6 +158,8 @@ export function encodeUrlState(state: UrlState): string {
   // Ticker only belongs on a tear sheet. Results and landing must not keep it.
   const ticker = state.view === "detail" ? state.ticker?.trim() : null
   if (ticker) sp.set("ticker", ticker)
+  const w = encodeWeights(state.weights)
+  if (w) sp.set("w", w)
   return sp.toString()
 }
 
@@ -160,7 +184,7 @@ export function decodeUrlState(sp: URLSearchParams): UrlState {
   } else {
     view = "landing"
   }
-  return { view, ticker, screen }
+  return { view, ticker, screen, weights: decodeWeights(sp.get("w") ?? "") }
 }
 
 /** Drop unknown keys and rewrite legacy view=results&ticker=… sheet links. */

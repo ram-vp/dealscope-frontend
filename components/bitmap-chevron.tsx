@@ -1,6 +1,6 @@
 export function BitmapChevron({ className }: { className?: string }) {
   return (
-    <svg
+    <svg aria-hidden="true"
       width="18"
       height="18"
       viewBox="0 0 27 27"

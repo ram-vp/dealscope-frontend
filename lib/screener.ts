@@ -3,18 +3,13 @@
 // the per-company "why this passed" reasons that fall out of the same pass.
 //
 // ARCHITECTURE NOTE -- why this is a module and not an HTTP endpoint.
-// DealScope's frontend is deliberately, entirely static: it imports
-// companies.json at build time and ships with no server, no database and no
-// API route (verified: zero files under app/api, zero route handlers, zero
-// "use server"). Screening 2,381 in-memory records is a sub-millisecond array
-// pass, so a network round-trip to a filtering endpoint would make every
-// keystroke *slower* than doing the work locally, and would break the
-// two-way-sync requirement (live counts have to update as the user types).
-// This module IS the filtering engine -- same structured input, same ranked
-// output, just called directly instead of over HTTP. If a server-side screener
-// is ever genuinely needed (e.g. a public API for other clients), this file is
-// already the pure, dependency-free core to lift into it: it imports only
-// types and the existing scorer.
+// DealScope has no request-time server: the route handlers under app/data/ are
+// prerendered to static files. The browser downloads the universe once, and
+// screening ~2,400 in-memory records is a sub-millisecond array pass, so a
+// round-trip to a filtering endpoint would make every keystroke *slower* and
+// break the live counts that update as the user types. This module IS the
+// filtering engine. It imports only types and the existing scorer, so it can
+// be lifted into a server-side screener if one is ever needed.
 //
 // The scoring engine is untouched. computeScore() still produces the
 // sector-relative composite (re-weighting only the factors that exist),
@@ -30,6 +25,7 @@ import {
   computeScore,
   passesBucketFilters,
   normalizeForSearch,
+  searchByText,
 } from "@/lib/dealscope-data"
 
 /** Inclusive lower bound, exclusive-of-nothing upper bound. Both optional, so
@@ -392,8 +388,8 @@ export interface ScreenResult {
    *  relevance narrowing -- this is the number the "N companies" readout
    *  shows, so it reflects the screen rather than the typing. */
   matchCount: number
-  /** True when free text matched nothing and was ignored rather than
-   *  emptying the list. */
+  /** True when the text was only unfinished screening words ("high") and
+   *  was ignored rather than searched as a company name. */
   textFellBack: boolean
 }
 
@@ -415,7 +411,6 @@ export function runScreen(
   const matchCount = base.length
 
   const q = normalizeForSearch(f.text)
-  let pool = base
   let textFellBack = false
 
   if (q.length > 0) {
@@ -431,36 +426,16 @@ export function runScreen(
       "revenue", "sales", "roce", "roe", "pe", "pledge", "cap", "mid", "mega",
       "large", "micro", "profitable", "undervalued",
     ])
-    const allScreenish = tokens.length > 0 && tokens.every((t) => SCREENISH.has(t) || t.length <= 2)
-
-    if (allScreenish) {
-      textFellBack = true
-    } else {
-      const hits = base.filter((c) => {
-        const hay = `${normalizeForSearch(c.name)} ${normalizeForSearch(c.ticker)} ${normalizeForSearch(c.sector)}`
-        return tokens.every((t) => hay.includes(t))
-      })
-      if (hits.length > 0) {
-        pool = hits
-      } else {
-        const loose = base.filter((c) => {
-          const hay = `${normalizeForSearch(c.name)} ${normalizeForSearch(c.ticker)}`
-          return tokens.some((t) => t.length >= 3 && hay.includes(t))
-        })
-        if (loose.length > 0) {
-          pool = loose
-        } else {
-          textFellBack = true
-        }
-      }
-    }
+    textFellBack = tokens.every((t) => SCREENISH.has(t))
+    // Text is ranked by relevance first, then score.
+    if (!textFellBack) return { results: searchByText(base, f.text, weights), matchCount, textFellBack }
   }
 
   // Score once per company, then sort on the cached number. Scoring inside the
   // comparator recomputed it on every comparison -- ~26k comparisons for the
   // full universe, so ~52k computeScore calls per keystroke instead of 2,381.
   // Identical ordering, just without the redundant work on the typing path.
-  const scored = pool.map((c) => ({ c, s: computeScore(c.factors, weights) }))
+  const scored = base.map((c) => ({ c, s: computeScore(c.factors, weights) }))
   scored.sort((a, b) => {
     if (a.s == null && b.s == null) return 0
     if (a.s == null) return 1
