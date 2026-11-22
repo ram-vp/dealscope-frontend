@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20",
+  "generated_at": "2026-11-22",
   "universe_size": 2381,
   "winsorize_percentiles": [
     1,
@@ -29,10 +29,10 @@
         "growth",
         "premium"
       ],
-      "p25": 13.9,
-      "p50": 25.4,
-      "p75": 45.7,
-      "sample_size": 2070
+      "p25": 12.6,
+      "p50": 23.1,
+      "p75": 41.6,
+      "sample_size": 2033
     },
     "revenue_growth_pct": {
       "frontend_key": "revenueGrowth",
@@ -43,10 +43,10 @@
         "growing",
         "highGrowth"
       ],
-      "p25": 3.3,
-      "p50": 16.7,
-      "p75": 32.8,
-      "sample_size": 2339
+      "p25": 5.8,
+      "p50": 19.1,
+      "p75": 36.5,
+      "sample_size": 2346
     },
     "ebitda_margin_pct": {
       "frontend_key": "ebitdaMargin",
@@ -57,10 +57,10 @@
         "healthy",
         "high"
       ],
-      "p25": 4.7,
-      "p50": 11.0,
-      "p75": 18.8,
-      "sample_size": 2336
+      "p25": 6.3,
+      "p50": 11.7,
+      "p75": 19.0,
+      "sample_size": 2151
     },
     "return_on_capital_employed_pct": {
       "frontend_key": "roce",
@@ -74,7 +74,7 @@
       "p25": 5.5,
       "p50": 11.8,
       "p75": 18.7,
-      "sample_size": 2236
+      "sample_size": 2237
     },
     "return_on_equity_pct": {
       "frontend_key": "roe",
@@ -85,10 +85,10 @@
         "strong",
         "excellent"
       ],
-      "p25": 4.0,
-      "p50": 10.3,
-      "p75": 16.5,
-      "sample_size": 2162
+      "p25": 4.4,
+      "p50": 10.8,
+      "p75": 16.8,
+      "sample_size": 2248
     },
     "total_debt": {
       "frontend_key": "debtLevel",
@@ -99,10 +99,10 @@
         "elevated",
         "high"
       ],
-      "p25": 36,
-      "p50": 172,
-      "p75": 789,
-      "sample_size": 2362
+      "p25": 38,
+      "p50": 187,
+      "p75": 909,
+      "sample_size": 2364
     },
     "promoter_pledge_pct": {
       "frontend_key": "promoterPledge",
