@@ -6,3 +6,7 @@ allowBuilds:
   # unresolved "set this to true or false" placeholder when eslint was added;
   # answering it explicitly keeps `pnpm install` from prompting again.
   unrs-resolver: false
+overrides:
+  # Dev-only, reached through eslint-config-next -> typescript-eslint, which
+  # still asks for ^10. 10.x has no patched release. Remove once that range moves.
+  "minimatch@^10": ^11.0.1
