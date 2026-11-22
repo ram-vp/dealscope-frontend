@@ -9,7 +9,7 @@ on:
     paths-ignore:
       - 'data/**'
   push:
-    branches: [main, pro-upgrade]
+    branches: [main, restore-ui]
   # The bot's merges to main don't trigger workflows, so check nightly that
   # what is being served still equals what the backend published.
   schedule:

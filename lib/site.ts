@@ -7,7 +7,7 @@ export const SITE = {
   title: "DealScope: Sector-relative comps and screening for NSE companies",
   description:
     "Screen NSE-listed Indian companies by sector-relative operating percentiles, peer trading multiples, and promoter pledge telemetry. Free, no account required.",
-  owner: "Ram Suthakaran",
+  owner: "Ramsuthakaran VP",
   email: "ramsuthakaran.vp@gmail.com",
   linkedin: "https://www.linkedin.com/in/ramsuthakaran-vp-778b4731b/",
 } as const
