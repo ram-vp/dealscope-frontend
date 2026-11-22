@@ -76,6 +76,7 @@ jobs:
           # newest un-applied one is worth publishing; older orphans are
           # superseded and merging them could roll prices backwards.
           # promote/* is never auto-swept: a human merges those.
+          git fetch --quiet origin '+refs/heads/main:refs/remotes/origin/main'
           git fetch --quiet origin '+refs/heads/price-sync/*:refs/remotes/origin/price-sync/*' || true
           PICK=""
           SEEN_NEWER=false
@@ -88,7 +89,24 @@ jobs:
                 git push origin --delete "$B" || true
                 SEEN_NEWER=true ;;
               OPEN)
-                echo "$B has an open PR; the apply job owns it."
+                # An open PR used to mean "the apply job owns it", so a PR whose
+                # apply job had failed was skipped by every later sweep, forever.
+                AGE=$(( $(date +%s) - $(git log -1 --format=%ct "origin/$B") ))
+                if (( AGE < 900 )); then
+                  echo "$B is only ${AGE}s old; its push-triggered run is still in flight."
+                else
+                  THEIRS=$(git show "origin/$B:data/dataset-meta.json" | jq -r '.prices_as_of // ""')
+                  OURS=$(git show "origin/main:data/dataset-meta.json" | jq -r '.prices_as_of // ""')
+                  if [[ "$SEEN_NEWER" == true || ! "$THEIRS" > "$OURS" ]]; then
+                    echo "Closing superseded $B (prices $THEIRS, main has $OURS)"
+                    if gh pr close "$B" --comment "Superseded: main already has prices as of ${OURS}. Merging this would roll them back."; then
+                      git push origin --delete "$B" || true
+                    fi
+                  else
+                    echo "Retrying stuck $B (prices $THEIRS, main has $OURS)"
+                    PICK="$B"
+                  fi
+                fi
                 SEEN_NEWER=true ;;
               NONE)
                 if [[ "$SEEN_NEWER" == true ]]; then
@@ -143,11 +161,11 @@ jobs:
           fi
           echo "Changed files:"
           printf '  %s\n' "${CHANGED[@]}"
-          allowed='^data/(companies|narratives|deals|filter-bands|sector-bands|dataset-meta)\.json$'
+          allowed='^data/(companies|narratives|deals|filter-bands|sector-bands|dataset-meta|news)\.json$'
           for f in "${CHANGED[@]}"; do
             if [[ ! "$f" =~ $allowed ]]; then
               echo "::error::Unexpected path on data-bot branch: $f"
-              echo "Only data/{companies,narratives,deals,filter-bands,sector-bands,dataset-meta}.json are allowed."
+              echo "Only data/{companies,narratives,deals,filter-bands,sector-bands,dataset-meta,news}.json are allowed."
               exit 1
             fi
           done
@@ -156,7 +174,7 @@ jobs:
           # come from origin/main, never from the branch under test.
           rm -rf /tmp/trusted /tmp/base-data && mkdir -p /tmp/trusted /tmp/base-data
           git show origin/main:scripts/validate_data.py > /tmp/trusted/validate_data.py
-          for f in companies deals narratives dataset-meta; do
+          for f in companies deals narratives dataset-meta news; do
             git show "origin/main:data/$f.json" > "/tmp/base-data/$f.json" 2>/dev/null || true
           done
           python3 /tmp/trusted/validate_data.py --candidate data --base /tmp/base-data
@@ -176,6 +194,9 @@ jobs:
             if [[ "$BRANCH" == price-sync/* ]]; then
               TITLE="Daily price refresh: ${BRANCH#price-sync/}"
               BODY="Automated daily market-cap sync from the dealscope backend. Fundamentals are unchanged. Safe to auto-merge. Source run: ${RUN_URL}"
+            elif [[ "$BRANCH" == promote/news-* ]]; then
+              TITLE="News refresh: ${BRANCH#promote/news-}"
+              BODY="Automated weekly news and filings refresh from the dealscope backend. No numbers change. Validated, auto-merged, then canary-checked on the live site. Source run: ${RUN_URL}"
             else
               TITLE="Promote fundamentals snapshot (${BRANCH#promote/})"
               BODY="Quarterly fundamentals promotion from the dealscope backend. Sanitized and gated on the backend, independently validated here, auto-merged, then canary-checked on the live site. Source run: ${RUN_URL}"
@@ -203,7 +224,13 @@ jobs:
           HEAD=$(gh pr view "$PR" --json headRefName --jq .headRefName)
           for i in 1 2 3 4 5 6 7 8; do
             MERGEABLE=$(gh pr view "$PR" --json mergeable --jq .mergeable || echo "UNKNOWN")
-            if [[ "$MERGEABLE" == "MERGEABLE" ]]; then
+            if [[ "$MERGEABLE" == "CONFLICTING" ]]; then
+              echo "::error::PR #$PR conflicts with main"
+              exit 1
+            fi
+            # GitHub can report UNKNOWN for minutes (PR #99 was stranded by it).
+            # The squash is the real test: set -e stops on a conflict.
+            if [[ "$MERGEABLE" == "MERGEABLE" || "$i" -ge 4 ]]; then
               git fetch origin main --quiet
               git checkout -q -B "__squash_merge_main" origin/main
               git fetch origin "$HEAD" --quiet
@@ -216,7 +243,14 @@ jobs:
                 exit 0
               fi
               git commit -m "$TITLE"
-              git push origin "HEAD:main"
+              if ! git push origin "HEAD:main"; then
+                if [[ "$i" -eq 8 ]]; then
+                  echo "::error::Could not push to main after 8 attempts"
+                  exit 1
+                fi
+                echo "main moved during the merge; retrying"
+                continue
+              fi
               SHA=$(git rev-parse HEAD)
               echo "sha=$SHA" >> "$GITHUB_OUTPUT"
               gh pr close "$PR" --comment "Squash-merged onto main as Ram VP (${SHA:0:7})." || true

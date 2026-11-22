@@ -30,7 +30,14 @@ RANGES = {
     "total_debt": (0, None),
     "ebitda_margin_pct": (-300, 300),
     "current_ratio": (0, 100),
+    "trailing_pe": (0, None),
+    "factor_revenue_growth": (0, 100),
+    "factor_ebitda_margin": (0, 100),
+    "factor_roce": (0, 100),
+    "factor_debt_level": (0, 100),
 }
+ORDERED = [("ev_ebitda_low", "ev_ebitda_high"), ("pe_implied_low", "pe_implied_high")]
+MAX_NEWS_SHRINK = 0.10
 
 
 def load_bundle(directory):
@@ -45,7 +52,14 @@ def load_bundle(directory):
         "deals": read("deals.json"),
         "narratives": read("narratives.json"),
         "meta": read("dataset-meta.json"),
+        "news": read("news.json"),
     }
+
+
+def _is_placeholder(company, field):
+    """0% margin with no EBITDA is the feed's "not applicable", not a value."""
+    return (field == "ebitda_margin_pct" and company.get(field) == 0
+            and "ebitda" in company and company["ebitda"] is None)
 
 
 def _violations(companies):
@@ -55,15 +69,43 @@ def _violations(companies):
             v = c.get(field)
             if v is None:
                 continue
+            if _is_placeholder(c, field):
+                count += 1
+                continue
             if isinstance(v, bool) or not isinstance(v, (int, float)):
                 count += 1
             elif (low is not None and v < low) or (high is not None and v > high):
                 count += 1
+        for low_key, high_key in ORDERED:
+            low, high = c.get(low_key), c.get(high_key)
+            if isinstance(low, (int, float)) and isinstance(high, (int, float)) and low > high:
+                count += 1
     return count
 
 
+def _news_problems(news, base_news):
+    if news is None:
+        return ["shape: news.json is missing"] if base_news else []
+    if not isinstance(news, dict) or not all(isinstance(v, dict) for v in news.values()):
+        return ["shape: news.json is not an object of objects"]
+    total, bad = 0, 0
+    for entry in news.values():
+        for key in ("filings", "bseNotices", "news"):
+            for item in entry.get(key) or []:
+                total += 1
+                if not isinstance(item, dict) or not str(item.get("link") or "").startswith("https://"):
+                    bad += 1
+    problems = [f"news_link: {bad} item(s) without an https link"] if bad else []
+    if isinstance(base_news, dict):
+        before = sum(len(e.get(k) or []) for e in base_news.values() for k in ("filings", "bseNotices", "news"))
+        if total < before * (1 - MAX_NEWS_SHRINK):
+            problems.append(f"news_shrink: {before} -> {total} items")
+    return problems
+
+
 def _coverage(companies, field):
-    return sum(1 for c in companies if c.get(field) is not None) / max(len(companies), 1)
+    real = sum(1 for c in companies if c.get(field) is not None and not _is_placeholder(c, field))
+    return real / max(len(companies), 1)
 
 
 def validate(candidate, base):
@@ -107,6 +149,8 @@ def validate(candidate, base):
             old, new = str(base_meta.get(key) or ""), str(meta.get(key) or "")
             if old and new < old:
                 problems.append(f"{code}: {key} {old} -> {new or 'missing'}")
+
+    problems += _news_problems(candidate.get("news"), (base or {}).get("news"))
 
     now_bad = _violations(comps)
     was_bad = _violations(base_comps) if isinstance(base_comps, list) else 0

@@ -95,6 +95,32 @@ for c in cand["companies"][:90]:
     c["revenue"] = None
 check("30% of revenue wiped blocks", "coverage" in codes(validate(cand, base)))
 
+print("=== Placeholder zero margins ===")
+old_feed = bundle()
+for c in old_feed["companies"][:30]:
+    c.update(ebitda=None, ebitda_margin_pct=0.0)
+fixed = copy.deepcopy(old_feed)
+for c in fixed["companies"][:30]:
+    c["ebitda_margin_pct"] = None
+check("nulling placeholders is not a coverage collapse", validate(fixed, old_feed) == [], str(validate(fixed, old_feed)))
+check("placeholders already live don't deadlock", validate(copy.deepcopy(old_feed), old_feed) == [])
+check("placeholders coming back are blocked", "impossible_value" in codes(validate(old_feed, fixed)))
+cand = bundle(); cand["companies"][0]["factor_roce"] = 101
+check("percentile over 100 blocks", "impossible_value" in codes(validate(cand, base)))
+cand = bundle(); cand["companies"][0].update(ev_ebitda_low=5, ev_ebitda_high=2)
+check("inverted valuation range blocks", "impossible_value" in codes(validate(cand, base)))
+
+print("=== News ===")
+ITEM = {"headline": "h", "link": "https://example.com/a", "date": "2026-11-20"}
+with_news = bundle(); with_news["news"] = {f"T{i:04d}": {"news": [dict(ITEM)]} for i in range(100)}
+check("good news passes", validate(copy.deepcopy(with_news), with_news) == [])
+cand = copy.deepcopy(with_news); cand["news"]["T0001"]["news"][0]["link"] = "javascript:alert(1)"
+check("non-https link blocks", "news_link" in codes(validate(cand, with_news)))
+cand = copy.deepcopy(with_news); cand["news"] = dict(list(cand["news"].items())[:50])
+check("half the news missing blocks", "news_shrink" in codes(validate(cand, with_news)))
+cand = copy.deepcopy(with_news); del cand["news"]
+check("news file deleted blocks", "shape" in codes(validate(cand, with_news)))
+
 print("=== Canary page check ===")
 meta = {"prices_as_of": "2026-10-05", "fundamentals_as_of": "2026-07-11"}
 exp = expected_strings(meta)
