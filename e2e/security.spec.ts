@@ -35,9 +35,14 @@ for (const path of ["/", "/?view=results", "/?view=detail&ticker=TCS", "/about",
     const errors: string[] = []
     page.on("pageerror", (error) => errors.push(error.message))
     page.on("console", (message) => {
-      // /_vercel/insights only exists on Vercel.
-      if (message.type() === "error" && !message.location().url.includes("/_vercel/insights") && !message.text().includes("/_vercel/insights")) {
-        errors.push(message.text())
+      // /_vercel/insights and /_vercel/speed-insights only exist on Vercel.
+      const text = message.text()
+      const url = message.location().url
+      const vercelBeacon = ["/_vercel/insights", "/_vercel/speed-insights"].some(
+        (path) => url.includes(path) || text.includes(path),
+      )
+      if (message.type() === "error" && !vercelBeacon) {
+        errors.push(text)
       }
     })
     await open(page, path)
