@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-23",
+  "generated_at": "2026-11-24",
   "universe_size": 2381,
   "winsorize_percentiles": [
     1,
@@ -390,7 +390,7 @@
       },
       "peRatio": {
         "p25": 25.7,
-        "p50": 38.1,
+        "p50": 37.7,
         "p75": 59.3,
         "sample_size": 150
       },
