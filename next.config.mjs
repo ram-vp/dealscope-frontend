@@ -1,8 +1,8 @@
 // Content-Security-Policy.
 //
 // Everything is same-origin: next/font self-hosts the fonts at build and Vercel
-// Analytics 2 is served from /_vercel/insights on this domain, so no external
-// origin is allowed at all.
+// Analytics 2 and Speed Insights 2 are served from /_vercel/insights and
+// /_vercel/speed-insights on this domain, so no external origin is allowed at all.
 //
 // 'unsafe-inline' stays in script-src, knowingly. Pages are prerendered and
 // Next inlines per-build flight scripts (68 distinct hashes across 7 pages when

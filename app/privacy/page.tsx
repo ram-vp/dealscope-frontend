@@ -34,9 +34,10 @@ export default function PrivacyPage() {
           <dt>Usage analytics</dt>
           <dd>
             Vercel Web Analytics records page path, referrer, approximate location (country, region, city), operating
-            system, browser and device type, to count visits. It sets no cookies. It tells visitors apart with a hash of
-            the request that is discarded after 24 hours. DealScope removes search terms, filters and tickers from the
-            address before it is sent.
+            system, browser and device type, to count visits. Vercel Speed Insights records page path and Core Web
+            Vitals (performance timings). Both set no cookies. Web Analytics tells visitors apart with a hash of the
+            request that is discarded after 24 hours. DealScope removes search terms, filters and tickers from the
+            address before either is sent.
           </dd>
           <dt>Theme preference</dt>
           <dd>Your light or dark choice is saved in your browser&apos;s local storage and is never sent anywhere.</dd>
