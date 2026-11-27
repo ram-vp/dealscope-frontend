@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-26",
+  "generated_at": "2026-11-27",
   "universe_size": 2381,
   "winsorize_percentiles": [
     1,
@@ -15,9 +15,9 @@
         "large",
         "mega"
       ],
-      "p25": 354,
-      "p50": 1733,
-      "p75": 8918,
+      "p25": 357,
+      "p50": 1740,
+      "p75": 9005,
       "sample_size": 2373
     },
     "trailing_pe": {
@@ -31,7 +31,7 @@
       ],
       "p25": 12.6,
       "p50": 22.8,
-      "p75": 41.1,
+      "p75": 41.3,
       "sample_size": 2033
     },
     "revenue_growth_pct": {
